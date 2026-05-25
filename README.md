@@ -1,6 +1,6 @@
-# Audio Normalization Tool for DJ Music
+# Audio Normalization DJ's - by Picnic Labs
 
-Professional audio normalization system for DJing. Normalizes music files to consistent -12 LUFS loudness for club playback on high-quality sound systems.
+Professional audio normalization system for DJing. Normalizes music files to consistent -12 LUFS loudness for club playback on high-quality sound systems. Never fiddle with trim again...
 
 ## Features
 
