@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# User-specific config (users should copy config.json and modify)
+config.local.json
+
+# Audio files (in case someone tests in the repo directory)
+*.m4a
+*.wav
+*.flac
+*.mp3
+*.aiff
+*.ogg
