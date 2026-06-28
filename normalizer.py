@@ -126,6 +126,7 @@ def normalize_audio(
     input_file: str,
     output_file: str,
     target_lufs: float = -12.0,
+    output_format: str = 'flac',
     compression_level: int = 8
 ) -> Tuple[bool, str]:
     """
@@ -133,8 +134,10 @@ def normalize_audio(
 
     Args:
         input_file: Path to input audio file
-        output_file: Path to output FLAC file
+        output_file: Path to output file
         target_lufs: Target loudness level in LUFS (default: -12.0)
+        output_format: 'flac' (compressed lossless) or 'aiff' (uncompressed,
+            universal Pioneer/CDJ support). Default 'flac'.
         compression_level: FLAC compression level 0-12 (default: 8)
 
     Returns:
@@ -165,14 +168,23 @@ def normalize_audio(
         f"print_format=summary"
     )
 
+    # Codec selection. Both are lossless; AIFF is uncompressed PCM (24-bit,
+    # big-endian) which every Pioneer CDJ/XDJ plays natively. FLAC is smaller
+    # but only supported on newer gear and only up to 48kHz.
+    if output_format == 'aiff':
+        codec_args = ['-c:a', 'pcm_s24be', '-write_id3v2', '1']
+    else:
+        codec_args = ['-c:a', 'flac', '-compression_level', str(compression_level)]
+
     cmd = [
         'ffmpeg',
         '-i', input_file,
         '-map', '0:a',            # explicit audio stream
         '-map', '0:v?',           # cover art if present (? = optional, no error if absent)
         '-af', loudnorm_filter,
-        '-c:a', 'flac',
-        '-compression_level', str(compression_level),
+        '-ar', '44100',           # loudnorm outputs 192kHz by default; pin to 44.1k
+                                  # (rekordbox/CDJs reject audio above 48kHz)
+        *codec_args,
         '-c:v', 'copy',           # copy cover art without re-encoding
         '-map_metadata', '0',     # copy all metadata tags
         '-y',  # Overwrite output file if exists
@@ -198,19 +210,22 @@ def normalize_audio(
         return False, f"FFmpeg error: {e.stderr}"
 
 
-def get_output_filename(input_file: str, destination_folder: str) -> str:
+def get_output_filename(input_file: str, destination_folder: str,
+                        output_format: str = 'flac') -> str:
     """
-    Generate output filename by replacing extension with .flac.
+    Generate output filename by replacing extension with .flac or .aiff.
 
     Args:
         input_file: Path to input file
         destination_folder: Destination folder path
+        output_format: 'flac' or 'aiff'
 
     Returns:
         Full path to output file
     """
     input_path = Path(input_file)
-    output_name = input_path.stem + '.flac'
+    ext = '.aiff' if output_format == 'aiff' else '.flac'
+    output_name = input_path.stem + ext
     return str(Path(destination_folder) / output_name)
 
 

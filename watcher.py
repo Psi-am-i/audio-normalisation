@@ -100,6 +100,7 @@ class AudioFileHandler(FileSystemEventHandler):
         self.watch_folder = Path(config['watch_folder']).expanduser().resolve()
         self.dest_folder = Path(config['destination_folder']).expanduser().resolve()
         self.target_lufs = config['target_lufs']
+        self.output_format = config.get('output_format', 'flac').lower()
         self.debounce_seconds = config.get('debounce_seconds', 2)
         self.supported_formats = set(config['supported_formats'])
 
@@ -157,14 +158,16 @@ class AudioFileHandler(FileSystemEventHandler):
             # Generate output filename
             output_file = normalizer.get_output_filename(
                 str(file_path),
-                str(self.dest_folder)
+                str(self.dest_folder),
+                self.output_format
             )
 
             # Normalize
             success, message = normalizer.normalize_audio(
                 str(file_path),
                 output_file,
-                target_lufs=self.target_lufs
+                target_lufs=self.target_lufs,
+                output_format=self.output_format
             )
 
             elapsed = time.time() - start_time

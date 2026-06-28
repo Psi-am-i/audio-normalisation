@@ -134,29 +134,31 @@ def format_time(seconds: float) -> str:
         return f"{hours:.1f}h"
 
 
-def process_single_file(args: Tuple[Path, Path]) -> Tuple[str, bool, str]:
+def process_single_file(args: Tuple[Path, Path, str]) -> Tuple[str, bool, str]:
     """
     Process a single audio file (wrapper for multiprocessing).
 
     Args:
-        args: Tuple of (audio_file_path, dest_path)
+        args: Tuple of (audio_file_path, dest_path, output_format)
 
     Returns:
         Tuple of (filename, success, message)
     """
-    audio_file, dest_path = args
+    audio_file, dest_path, output_format = args
 
     # Generate output filename
     output_file = normalizer.get_output_filename(
         str(audio_file),
-        str(dest_path)
+        str(dest_path),
+        output_format
     )
 
     # Normalize
     success, message = normalizer.normalize_audio(
         str(audio_file),
         output_file,
-        target_lufs=-12.0
+        target_lufs=-12.0,
+        output_format=output_format
     )
 
     return (audio_file.name, success, message)
@@ -199,9 +201,25 @@ def main():
         dest_path = Path(dest_input).expanduser().resolve()
         break
 
+    # Choose output format
+    print()
+    print("Output format:")
+    print("  [1] AIFF — uncompressed, lossless, plays on ALL Pioneer/CDJ gear (larger files)")
+    print("  [2] FLAC — compressed, lossless, modern gear only, max 48kHz (smaller files)")
+    while True:
+        fmt_in = get_user_input("Choose format [1=AIFF / 2=FLAC, default 1]: ").lower()
+        if fmt_in in ('', '1', 'aiff'):
+            output_format = 'aiff'
+            break
+        if fmt_in in ('2', 'flac'):
+            output_format = 'flac'
+            break
+        print("Please enter 1 (AIFF) or 2 (FLAC).")
+
     print()
     print(f"Source: {source_path}")
     print(f"Destination: {dest_path}")
+    print(f"Output format: {output_format.upper()}")
     print()
 
     # Find audio files
@@ -255,7 +273,7 @@ def main():
     start_time = time.time()
 
     # Prepare arguments for parallel processing
-    process_args = [(audio_file, dest_path) for audio_file in audio_files]
+    process_args = [(audio_file, dest_path, output_format) for audio_file in audio_files]
 
     # Process files in parallel with progress bar
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
