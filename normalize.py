@@ -7,6 +7,7 @@ Prompts user for source and destination paths, then batch processes audio files.
 import os
 import sys
 import time
+import multiprocessing
 from pathlib import Path
 from typing import List, Tuple
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -92,36 +93,6 @@ def validate_destination_path(path_str: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def find_audio_files(source_path: Path) -> List[Path]:
-    """
-    Find all supported audio files in source path.
-
-    Args:
-        source_path: Path object (file or directory)
-
-    Returns:
-        List of audio file paths
-    """
-    if source_path.is_file():
-        # Single file
-        if source_path.suffix.lower() in normalizer.SUPPORTED_FORMATS:
-            return [source_path]
-        else:
-            return []
-
-    # Directory - scan recursively
-    audio_files = []
-    for ext in normalizer.SUPPORTED_FORMATS:
-        # Use glob with case-insensitive matching
-        audio_files.extend(source_path.rglob(f'*{ext}'))
-        audio_files.extend(source_path.rglob(f'*{ext.upper()}'))
-
-    # Remove duplicates and sort
-    audio_files = sorted(set(audio_files))
-
-    return audio_files
-
-
 def format_time(seconds: float) -> str:
     """Format seconds into human-readable time."""
     if seconds < 60:
@@ -157,7 +128,7 @@ def process_single_file(args: Tuple[Path, Path, str]) -> Tuple[str, bool, str]:
     success, message = normalizer.normalize_audio(
         str(audio_file),
         output_file,
-        target_lufs=-12.0,
+        target_lufs=normalizer.DEFAULT_TARGET_LUFS,
         output_format=output_format
     )
 
@@ -209,7 +180,7 @@ def main():
     while True:
         fmt_in = get_user_input("Choose format [1=AIFF / 2=FLAC, default 1]: ").lower()
         if fmt_in in ('', '1', 'aiff'):
-            output_format = 'aiff'
+            output_format = normalizer.DEFAULT_OUTPUT_FORMAT
             break
         if fmt_in in ('2', 'flac'):
             output_format = 'flac'
@@ -224,7 +195,7 @@ def main():
 
     # Find audio files
     print("Scanning for audio files...")
-    audio_files = find_audio_files(source_path)
+    audio_files = normalizer.find_audio_files(source_path)
 
     if not audio_files:
         print("No supported audio files found!")
@@ -325,6 +296,9 @@ def main():
 
 
 if __name__ == '__main__':
+    # Required for ProcessPoolExecutor in a frozen (PyInstaller) build: worker
+    # processes re-exec this binary and must not re-run main(). No-op otherwise.
+    multiprocessing.freeze_support()
     try:
         main()
     except KeyboardInterrupt:

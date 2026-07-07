@@ -2,7 +2,6 @@
   "watch_folder": "/path/to/your/watch/folder",
   "destination_folder": "/path/to/your/output/folder",
   "target_lufs": -12,
-  "supported_formats": [".m4a", ".wav", ".flac", ".mp3", ".aiff", ".ogg"],
   "output_format": "aiff",
   "debounce_seconds": 2,
   "log_file": "~/Library/Logs/audio-normalizer.log"

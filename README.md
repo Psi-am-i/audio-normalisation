@@ -5,7 +5,7 @@ Professional audio normalization system for DJing. Normalizes music files to con
 ## Features
 
 - **Consistent Loudness:** Normalizes all tracks to -12 LUFS using EBU R128 standard
-- **Lossless Output:** All files converted to FLAC for maximum quality
+- **Lossless Output:** Files converted to AIFF (default) or FLAC for maximum quality
 - **Two Modes:** Manual batch processing or automatic folder watching
 - **Preserves Originals:** Never modifies source files
 - **Club-Optimized:** No compression, just loudness normalization
@@ -50,7 +50,7 @@ python3 normalize.py
 
 You'll be prompted for:
 1. **Source path:** Single file or folder with audio files
-2. **Destination folder:** Where normalized FLAC files will be saved
+2. **Destination folder:** Where normalized files will be saved
 
 The script will:
 - Scan for supported audio files
@@ -96,7 +96,8 @@ Edit `config.json` to set your folders:
 {
   "watch_folder": "/path/to/your/watch/folder",
   "destination_folder": "/path/to/your/output/folder",
-  "target_lufs": -12
+  "target_lufs": -12,
+  "output_format": "aiff"
 }
 ```
 
@@ -131,6 +132,21 @@ cat ~/Library/Logs/audio-normalizer-error.log
 bash uninstall_daemon.sh
 ```
 
+## Shareable App (for non-technical users)
+
+You can build a self-contained, double-clickable `Normalizer.app` that bundles
+Python and ffmpeg — recipients install nothing. Double-clicking opens Terminal
+with the manual flow (source → destination → AIFF/FLAC). The autowatch daemon is
+not included in the app.
+
+```bash
+packaging/build_app.sh
+```
+
+Send `packaging/dist/Normalizer.zip`. The app is unsigned, so the first launch on
+another Mac is right-click → **Open** → **Open**. See
+[packaging/BUILD.md](packaging/BUILD.md) for details and the architecture notes.
+
 ## How It Works
 
 ### Two-Pass Normalization
@@ -146,7 +162,7 @@ The tool uses ffmpeg's `loudnorm` filter with a two-pass process for accurate lo
    - Uses measurements from pass 1
    - Normalizes to -12 LUFS target
    - Prevents clipping with -1.5 dB true peak limit
-   - Outputs lossless FLAC with maximum compression
+   - Outputs lossless AIFF (default) or FLAC with maximum compression
 
 ### Why -12 LUFS?
 
@@ -155,10 +171,19 @@ The tool uses ffmpeg's `loudnorm` filter with a two-pass process for accurate lo
 - Provides good headroom for system dynamics
 - Consistent with streaming platform standards
 
-### Why FLAC Output?
+### Output Format: AIFF vs FLAC
 
+The output format is set via the `output_format` key in `config.json` (default: `aiff`).
+Both are lossless — the choice is compatibility vs file size.
+
+**AIFF (default):**
+- **Uncompressed:** 24-bit big-endian PCM, bit-perfect quality
+- **Universal:** Plays natively on every Pioneer CDJ/XDJ and standalone gear
+- **Larger:** Same size as WAV
+
+**FLAC:**
 - **Lossless:** Bit-perfect audio quality
-- **Compressed:** Smaller than WAV (~50-60% size)
+- **Compressed:** Smaller than WAV/AIFF (~50-60% size)
 - **Metadata:** Supports tags (unlike WAV)
 - **Universal:** Plays on all modern DJ gear
 
@@ -187,7 +212,8 @@ audio-normalisation/
 - AIFF (Apple Uncompressed)
 - OGG (Vorbis)
 
-**Output format:**
+**Output formats** (set via `output_format` in `config.json`):
+- AIFF (lossless, uncompressed — default)
 - FLAC (lossless, compressed)
 
 ## Troubleshooting
@@ -242,7 +268,7 @@ bash install_daemon.sh
 
 Check loudness of normalized file:
 ```bash
-ffmpeg -i output.flac -af loudnorm=print_format=summary -f null - 2>&1 | grep -A 12 "Parsed_loudnorm"
+ffmpeg -i output.aiff -af loudnorm=print_format=summary -f null - 2>&1 | grep -A 12 "Parsed_loudnorm"
 ```
 
 Look for "Output Integrated" value - should be close to -12.0 LUFS.
@@ -252,8 +278,8 @@ Look for "Output Integrated" value - should be close to -12.0 LUFS.
 1. **Batch process before gigs:** Use manual mode to normalize your entire library
 2. **Auto-process new purchases:** Enable daemon to handle new tracks automatically
 3. **Test on your system:** Always audition normalized tracks on your DJ setup
-4. **Keep originals:** Never delete source files - FLAC output is separate
-5. **USB stick preparation:** Copy normalized FLACs to USB for CDJ/standalone gear
+4. **Keep originals:** Never delete source files - normalized output is separate
+5. **USB stick preparation:** Copy normalized files to USB for CDJ/standalone gear
 
 ## Technical Details
 
@@ -261,14 +287,20 @@ Look for "Output Integrated" value - should be close to -12.0 LUFS.
 - **Target loudness:** -12 LUFS (Loudness Units relative to Full Scale)
 - **True peak limit:** -1.5 dB (prevents inter-sample peaks)
 - **Loudness range:** 11 LU (preserves dynamics)
-- **FLAC compression:** Level 8 (maximum)
+- **Output format:** AIFF (24-bit PCM, default) or FLAC
+- **FLAC compression:** Level 8 (maximum, when FLAC selected)
 - **Processing:** Two-pass for accuracy
 
 ## License
 
 MIT License - Free to use for personal and commercial purposes. See [LICENSE](LICENSE) file for details.
 
-This tool uses FFMPEG, which is licensed under LGPL 2.1+. You must have FFMPEG installed separately.
+This tool uses FFmpeg. When run from source you must have ffmpeg installed
+separately (e.g. `brew install ffmpeg`). The distributable apps (see
+`packaging/`) bundle a self-contained static **GPLv3** build of FFmpeg; the GPL
+license text and attribution travel inside each app's zip (a `licenses` folder).
+FFmpeg source: https://ffmpeg.org/releases/ — builds with `--enable-nonfree` are
+deliberately refused by the build scripts, as they are not redistributable.
 
 ## Support
 

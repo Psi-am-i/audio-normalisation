@@ -99,10 +99,11 @@ class AudioFileHandler(FileSystemEventHandler):
         self.logger = logger
         self.watch_folder = Path(config['watch_folder']).expanduser().resolve()
         self.dest_folder = Path(config['destination_folder']).expanduser().resolve()
-        self.target_lufs = config['target_lufs']
-        self.output_format = config.get('output_format', 'flac').lower()
+        self.target_lufs = config.get('target_lufs', normalizer.DEFAULT_TARGET_LUFS)
+        self.output_format = config.get('output_format', normalizer.DEFAULT_OUTPUT_FORMAT).lower()
         self.debounce_seconds = config.get('debounce_seconds', 2)
-        self.supported_formats = set(config['supported_formats'])
+        # Format support is owned by the core engine; config no longer duplicates it.
+        self.supported_formats = normalizer.SUPPORTED_FORMATS
 
         # Ensure destination exists
         self.dest_folder.mkdir(parents=True, exist_ok=True)

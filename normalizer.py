@@ -7,11 +7,71 @@ Implements two-pass loudness normalization to achieve consistent -12 LUFS output
 import subprocess
 import json
 import os
+import shutil
+import sys
 from pathlib import Path
 from typing import Optional, Dict, Tuple
 
 
 SUPPORTED_FORMATS = {'.m4a', '.wav', '.flac', '.mp3', '.aiff', '.ogg'}
+
+# Single source of truth for defaults. Front-ends (normalize.py, watcher.py)
+# import these rather than hardcoding, so behaviour can't drift between modes.
+DEFAULT_TARGET_LUFS = -12.0
+DEFAULT_OUTPUT_FORMAT = 'aiff'  # uncompressed PCM; plays on all Pioneer/CDJ gear
+
+
+def resolve_ffmpeg() -> str:
+    """
+    Locate the ffmpeg binary to use, in priority order:
+
+    1. Bundled alongside a frozen (PyInstaller) build
+    2. FFMPEG_BINARY environment override
+    3. ffmpeg found on PATH
+    4. Common Homebrew locations (launchd runs with a minimal PATH)
+
+    Returns the resolved path, or bare 'ffmpeg' as a last resort so the
+    subprocess call fails with a clear error rather than silently.
+    """
+    candidates = []
+
+    # Bundled binary (PyInstaller sets sys.frozen / sys._MEIPASS)
+    if getattr(sys, 'frozen', False):
+        base = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent))
+        candidates.append(base / 'ffmpeg')
+        candidates.append(Path(sys.executable).parent / 'ffmpeg')
+
+    env_override = os.environ.get('FFMPEG_BINARY')
+    if env_override:
+        candidates.insert(0, Path(env_override))
+
+    on_path = shutil.which('ffmpeg')
+    if on_path:
+        candidates.append(Path(on_path))
+
+    candidates.append(Path('/opt/homebrew/bin/ffmpeg'))
+    candidates.append(Path('/usr/local/bin/ffmpeg'))
+
+    for candidate in candidates:
+        if candidate and candidate.exists():
+            return str(candidate)
+
+    return 'ffmpeg'
+
+
+def _ffmpeg_error_summary(stderr: str) -> str:
+    """Pull a concise, human-readable reason out of ffmpeg's verbose stderr."""
+    if not stderr:
+        return "no error output from ffmpeg"
+    lines = [ln.strip() for ln in stderr.strip().splitlines() if ln.strip()]
+    # The actual cause is almost always on the last meaningful line.
+    for ln in reversed(lines):
+        low = ln.lower()
+        if any(k in low for k in ("error", "invalid", "no such", "denied",
+                                  "does not contain", "unable", "failed",
+                                  "not found", "permission")):
+            return ln
+    return lines[-1] if lines else "unknown ffmpeg error"
 
 
 def validate_file(file_path: str) -> bool:
@@ -38,7 +98,7 @@ def validate_file(file_path: str) -> bool:
     return True
 
 
-def analyze_loudness(input_file: str, target_lufs: float = -12.0) -> Optional[Dict[str, float]]:
+def analyze_loudness(input_file: str, target_lufs: float = DEFAULT_TARGET_LUFS) -> Optional[Dict[str, float]]:
     """
     First pass: Analyze audio file to measure current loudness.
 
@@ -52,7 +112,7 @@ def analyze_loudness(input_file: str, target_lufs: float = -12.0) -> Optional[Di
     """
     # Build ffmpeg command for analysis pass
     cmd = [
-        'ffmpeg',
+        resolve_ffmpeg(),
         '-i', input_file,
         '-af', f'loudnorm=I={target_lufs}:print_format=json',
         '-f', 'null',
@@ -125,8 +185,8 @@ def analyze_loudness(input_file: str, target_lufs: float = -12.0) -> Optional[Di
 def normalize_audio(
     input_file: str,
     output_file: str,
-    target_lufs: float = -12.0,
-    output_format: str = 'flac',
+    target_lufs: float = DEFAULT_TARGET_LUFS,
+    output_format: str = DEFAULT_OUTPUT_FORMAT,
     compression_level: int = 8
 ) -> Tuple[bool, str]:
     """
@@ -136,8 +196,8 @@ def normalize_audio(
         input_file: Path to input audio file
         output_file: Path to output file
         target_lufs: Target loudness level in LUFS (default: -12.0)
-        output_format: 'flac' (compressed lossless) or 'aiff' (uncompressed,
-            universal Pioneer/CDJ support). Default 'flac'.
+        output_format: 'aiff' (uncompressed, universal Pioneer/CDJ support) or
+            'flac' (compressed lossless, newer gear only). Default 'aiff'.
         compression_level: FLAC compression level 0-12 (default: 8)
 
     Returns:
@@ -145,7 +205,19 @@ def normalize_audio(
     """
     # Validate input file
     if not validate_file(input_file):
-        return False, f"Invalid input file: {input_file}"
+        return False, f"not a supported audio file: {Path(input_file).name}"
+
+    # Guard: never read and write the same file. This is the classic "I already
+    # had an AIFF in the folder" case — when SOURCE and DESTINATION are the same
+    # folder, an existing track.aiff maps to an output named track.aiff, i.e. the
+    # very file we're reading. ffmpeg can't do a safe in-place overwrite.
+    try:
+        same_file = Path(input_file).resolve() == Path(output_file).resolve()
+    except OSError:
+        same_file = False
+    if same_file:
+        return False, ("output would overwrite the source file — "
+                       "pick a DESTINATION folder that isn't the source folder")
 
     # Pass 1: Analyze loudness
     print(f"Analyzing: {Path(input_file).name}")
@@ -177,7 +249,7 @@ def normalize_audio(
         codec_args = ['-c:a', 'flac', '-compression_level', str(compression_level)]
 
     cmd = [
-        'ffmpeg',
+        resolve_ffmpeg(),
         '-i', input_file,
         '-map', '0:a',            # explicit audio stream
         '-map', '0:v?',           # cover art if present (? = optional, no error if absent)
@@ -207,18 +279,18 @@ def normalize_audio(
             return False, "Output file was not created"
 
     except subprocess.CalledProcessError as e:
-        return False, f"FFmpeg error: {e.stderr}"
+        return False, f"ffmpeg failed — {_ffmpeg_error_summary(e.stderr)}"
 
 
 def get_output_filename(input_file: str, destination_folder: str,
-                        output_format: str = 'flac') -> str:
+                        output_format: str = DEFAULT_OUTPUT_FORMAT) -> str:
     """
-    Generate output filename by replacing extension with .flac or .aiff.
+    Generate output filename by replacing extension with .aiff or .flac.
 
     Args:
         input_file: Path to input file
         destination_folder: Destination folder path
-        output_format: 'flac' or 'aiff'
+        output_format: 'aiff' or 'flac'
 
     Returns:
         Full path to output file
@@ -227,6 +299,29 @@ def get_output_filename(input_file: str, destination_folder: str,
     ext = '.aiff' if output_format == 'aiff' else '.flac'
     output_name = input_path.stem + ext
     return str(Path(destination_folder) / output_name)
+
+
+def find_audio_files(source_path) -> list:
+    """
+    Find all supported audio files at a path (single file or directory tree).
+
+    Args:
+        source_path: str or Path to a file or directory
+
+    Returns:
+        Sorted list of Path objects for supported audio files.
+    """
+    path = Path(source_path)
+
+    if path.is_file():
+        return [path] if path.suffix.lower() in SUPPORTED_FORMATS else []
+
+    audio_files = []
+    for ext in SUPPORTED_FORMATS:
+        audio_files.extend(path.rglob(f'*{ext}'))
+        audio_files.extend(path.rglob(f'*{ext.upper()}'))
+
+    return sorted(set(audio_files))
 
 
 if __name__ == '__main__':

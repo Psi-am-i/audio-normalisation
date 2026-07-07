@@ -11,6 +11,15 @@ ENV/
 dist/
 build/
 
+# Packaging build outputs (GUI)
+packaging/build-gui/
+packaging/dist-gui/
+
+# Personal GUI background photo (public repo — keep local; run make_bg.py after
+# dropping your own gui_assets/background_source.jpg)
+gui_assets/background_source.*
+gui_assets/background.png
+
 # macOS
 .DS_Store
 .AppleDouble
