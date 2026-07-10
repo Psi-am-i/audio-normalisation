@@ -101,6 +101,7 @@ class AudioFileHandler(FileSystemEventHandler):
         self.dest_folder = Path(config['destination_folder']).expanduser().resolve()
         self.target_lufs = config.get('target_lufs', normalizer.DEFAULT_TARGET_LUFS)
         self.output_format = config.get('output_format', normalizer.DEFAULT_OUTPUT_FORMAT).lower()
+        self.bitrate = int(config.get('bitrate', normalizer.DEFAULT_BITRATE))
         self.debounce_seconds = config.get('debounce_seconds', 2)
         # Format support is owned by the core engine; config no longer duplicates it.
         self.supported_formats = normalizer.SUPPORTED_FORMATS
@@ -168,7 +169,8 @@ class AudioFileHandler(FileSystemEventHandler):
                 str(file_path),
                 output_file,
                 target_lufs=self.target_lufs,
-                output_format=self.output_format
+                output_format=self.output_format,
+                bitrate=self.bitrate
             )
 
             elapsed = time.time() - start_time

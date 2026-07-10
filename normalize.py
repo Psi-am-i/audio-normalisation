@@ -105,17 +105,17 @@ def format_time(seconds: float) -> str:
         return f"{hours:.1f}h"
 
 
-def process_single_file(args: Tuple[Path, Path, str]) -> Tuple[str, bool, str]:
+def process_single_file(args: Tuple[Path, Path, str, int]) -> Tuple[str, bool, str]:
     """
     Process a single audio file (wrapper for multiprocessing).
 
     Args:
-        args: Tuple of (audio_file_path, dest_path, output_format)
+        args: Tuple of (audio_file_path, dest_path, output_format, bitrate)
 
     Returns:
         Tuple of (filename, success, message)
     """
-    audio_file, dest_path, output_format = args
+    audio_file, dest_path, output_format, bitrate = args
 
     # Generate output filename
     output_file = normalizer.get_output_filename(
@@ -129,7 +129,8 @@ def process_single_file(args: Tuple[Path, Path, str]) -> Tuple[str, bool, str]:
         str(audio_file),
         output_file,
         target_lufs=normalizer.DEFAULT_TARGET_LUFS,
-        output_format=output_format
+        output_format=output_format,
+        bitrate=bitrate
     )
 
     return (audio_file.name, success, message)
@@ -173,24 +174,48 @@ def main():
         break
 
     # Choose output format
+    fmt_keys = list(normalizer.OUTPUT_FORMATS)  # aiff, flac, wav, mp3, aac
     print()
     print("Output format:")
-    print("  [1] AIFF — uncompressed, lossless, plays on ALL Pioneer/CDJ gear (larger files)")
-    print("  [2] FLAC — compressed, lossless, modern gear only, max 48kHz (smaller files)")
+    for n, key in enumerate(fmt_keys, 1):
+        info = normalizer.OUTPUT_FORMATS[key]
+        print(f"  [{n}] {key.upper():4s} — {info['summary']}")
+        print(f"        gear: {info['gear']}")
     while True:
-        fmt_in = get_user_input("Choose format [1=AIFF / 2=FLAC, default 1]: ").lower()
-        if fmt_in in ('', '1', 'aiff'):
+        fmt_in = get_user_input(
+            f"Choose format [1-{len(fmt_keys)} or name, default 1=AIFF]: ").lower()
+        if fmt_in == '':
             output_format = normalizer.DEFAULT_OUTPUT_FORMAT
             break
-        if fmt_in in ('2', 'flac'):
-            output_format = 'flac'
+        if fmt_in in fmt_keys:
+            output_format = fmt_in
             break
-        print("Please enter 1 (AIFF) or 2 (FLAC).")
+        if fmt_in.isdigit() and 1 <= int(fmt_in) <= len(fmt_keys):
+            output_format = fmt_keys[int(fmt_in) - 1]
+            break
+        print(f"Please enter 1-{len(fmt_keys)} or a format name.")
 
+    # Choose bitrate (lossy formats only)
+    bitrate = normalizer.DEFAULT_BITRATE
+    if normalizer.OUTPUT_FORMATS[output_format]['lossy']:
+        choices = "/".join(str(b) for b in normalizer.BITRATES)
+        while True:
+            br_in = get_user_input(
+                f"Bitrate in kbps [{choices}, default {normalizer.DEFAULT_BITRATE}]: ")
+            if br_in == '':
+                break
+            if br_in.isdigit() and int(br_in) in normalizer.BITRATES:
+                bitrate = int(br_in)
+                break
+            print(f"Please enter one of: {choices}.")
+
+    fmt_desc = output_format.upper()
+    if normalizer.OUTPUT_FORMATS[output_format]['lossy']:
+        fmt_desc += f" {bitrate}kbps"
     print()
     print(f"Source: {source_path}")
     print(f"Destination: {dest_path}")
-    print(f"Output format: {output_format.upper()}")
+    print(f"Output format: {fmt_desc}")
     print()
 
     # Find audio files
@@ -244,7 +269,7 @@ def main():
     start_time = time.time()
 
     # Prepare arguments for parallel processing
-    process_args = [(audio_file, dest_path, output_format) for audio_file in audio_files]
+    process_args = [(audio_file, dest_path, output_format, bitrate) for audio_file in audio_files]
 
     # Process files in parallel with progress bar
     with ProcessPoolExecutor(max_workers=max_workers) as executor:

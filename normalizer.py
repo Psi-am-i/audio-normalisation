@@ -6,6 +6,7 @@ Implements two-pass loudness normalization to achieve consistent -12 LUFS output
 
 import subprocess
 import json
+import math
 import os
 import shutil
 import sys
@@ -19,6 +20,89 @@ SUPPORTED_FORMATS = {'.m4a', '.wav', '.flac', '.mp3', '.aiff', '.ogg'}
 # import these rather than hardcoding, so behaviour can't drift between modes.
 DEFAULT_TARGET_LUFS = -12.0
 DEFAULT_OUTPUT_FORMAT = 'aiff'  # uncompressed PCM; plays on all Pioneer/CDJ gear
+DEFAULT_BITRATE = 320           # kbps, lossy formats only
+BITRATES = (320, 256, 192)      # offered choices, kbps
+
+# Output format registry — single source of truth for every front-end.
+#   ext        output file extension
+#   lossy      True if a bitrate applies
+#   art        cover-art strategy: 'copy' (map + stream-copy), 'attached_pic'
+#              (m4a needs the disposition set), or None (container can't
+#              carry art — WAV)
+#   summary    one-line description for menus/log lines
+#   gear       Pioneer support note (verified against pioneerdj.com specs and
+#              the joeselway/Pioneer-DJ-File-Formats matrix, Jul 2026)
+OUTPUT_FORMATS = {
+    'aiff': {
+        'ext': '.aiff', 'lossy': False, 'art': 'copy',
+        'summary': 'uncompressed lossless, 24-bit (largest files)',
+        'gear': 'plays on ALL Pioneer/CDJ gear',
+    },
+    'flac': {
+        'ext': '.flac', 'lossy': False, 'art': 'copy',
+        'summary': 'compressed lossless (smaller than AIFF/WAV)',
+        'gear': ('CDJ-3000/2000NXS2/TOUR1, XDJ-1000MK2/RX2/RX3/XZ/AZ, Opus '
+                 'Quad only — NOT CDJ-2000NXS & older, CDJ-900, XDJ-700/1000/RX'),
+    },
+    'wav': {
+        'ext': '.wav', 'lossy': False, 'art': None,
+        'summary': 'uncompressed lossless, 16-bit (no cover art in WAV)',
+        'gear': ('plays on ALL Pioneer/CDJ gear (written 16-bit: 24-bit WAV '
+                 'uses a WAVE_EXTENSIBLE header some CDJ firmware rejects)'),
+    },
+    'mp3': {
+        'ext': '.mp3', 'lossy': True, 'art': 'copy',
+        'summary': 'lossy, smallest files',
+        'gear': 'plays on ALL Pioneer/CDJ gear',
+    },
+    'aac': {
+        'ext': '.m4a', 'lossy': True, 'art': 'attached_pic',
+        'summary': 'lossy, better quality than MP3 at the same bitrate',
+        'gear': 'plays on all modern Pioneer/CDJ gear (CDJ-350/850/900/2000 onward, all XDJ)',
+    },
+}
+
+
+_AAC_ENCODER = None
+
+
+def aac_encoder() -> str:
+    """
+    Best available AAC encoder. Apple's AudioToolbox encoder (aac_at, present
+    in macOS ffmpeg builds) honours the requested bitrate and sounds better;
+    ffmpeg's native 'aac' clamps around ~224k for 44.1kHz stereo no matter
+    what is asked for. Probed once, then cached.
+    """
+    global _AAC_ENCODER
+    if _AAC_ENCODER is None:
+        try:
+            out = subprocess.run([resolve_ffmpeg(), '-hide_banner', '-encoders'],
+                                 capture_output=True, text=True).stdout
+            _AAC_ENCODER = 'aac_at' if ' aac_at ' in out else 'aac'
+        except Exception:
+            _AAC_ENCODER = 'aac'
+    return _AAC_ENCODER
+
+
+def codec_args(output_format: str, bitrate: int = DEFAULT_BITRATE,
+               compression_level: int = 8) -> list:
+    """ffmpeg codec arguments for an output format (bitrate: lossy only)."""
+    if output_format == 'aiff':
+        # 24-bit big-endian PCM; ID3v2 chunk so tags survive in AIFF
+        return ['-c:a', 'pcm_s24be', '-write_id3v2', '1']
+    if output_format == 'flac':
+        return ['-c:a', 'flac', '-compression_level', str(compression_level)]
+    if output_format == 'wav':
+        # 16-bit: >16-bit WAV gets a WAVE_EXTENSIBLE header that some CDJ
+        # firmware rejects. Use AIFF for 24-bit lossless instead.
+        return ['-c:a', 'pcm_s16le']
+    if output_format == 'mp3':
+        # ID3v2.3 — the version rekordbox/CDJ firmware handles most reliably
+        return ['-c:a', 'libmp3lame', '-b:a', f'{bitrate}k', '-id3v2_version', '3']
+    if output_format == 'aac':
+        return ['-c:a', aac_encoder(), '-b:a', f'{bitrate}k',
+                '-movflags', '+faststart']
+    raise ValueError(f"unknown output format: {output_format}")
 
 
 def resolve_ffmpeg() -> str:
@@ -36,10 +120,11 @@ def resolve_ffmpeg() -> str:
     candidates = []
 
     # Bundled binary (PyInstaller sets sys.frozen / sys._MEIPASS)
+    exe = 'ffmpeg.exe' if sys.platform.startswith('win') else 'ffmpeg'
     if getattr(sys, 'frozen', False):
         base = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent))
-        candidates.append(base / 'ffmpeg')
-        candidates.append(Path(sys.executable).parent / 'ffmpeg')
+        candidates.append(base / exe)
+        candidates.append(Path(sys.executable).parent / exe)
 
     env_override = os.environ.get('FFMPEG_BINARY')
     if env_override:
@@ -167,12 +252,20 @@ def analyze_loudness(input_file: str, target_lufs: float = DEFAULT_TARGET_LUFS) 
         measurements = json.loads(json_str)
 
         # Extract the measured values we need
-        return {
+        values = {
             'measured_I': float(measurements['input_i']),
             'measured_LRA': float(measurements['input_lra']),
             'measured_TP': float(measurements['input_tp']),
             'measured_thresh': float(measurements['input_thresh'])
         }
+
+        # Silent or near-empty audio measures -inf; passing that back into the
+        # loudnorm filter makes ffmpeg abort with a cryptic "Result too large".
+        if not all(map(math.isfinite, values.values())):
+            print(f"Error: {Path(input_file).name} has no measurable audio (silent or empty?)")
+            return None
+
+        return values
 
     except subprocess.CalledProcessError as e:
         print(f"Error analyzing {input_file}: {e.stderr}")
@@ -187,6 +280,7 @@ def normalize_audio(
     output_file: str,
     target_lufs: float = DEFAULT_TARGET_LUFS,
     output_format: str = DEFAULT_OUTPUT_FORMAT,
+    bitrate: int = DEFAULT_BITRATE,
     compression_level: int = 8
 ) -> Tuple[bool, str]:
     """
@@ -196,13 +290,16 @@ def normalize_audio(
         input_file: Path to input audio file
         output_file: Path to output file
         target_lufs: Target loudness level in LUFS (default: -12.0)
-        output_format: 'aiff' (uncompressed, universal Pioneer/CDJ support) or
-            'flac' (compressed lossless, newer gear only). Default 'aiff'.
+        output_format: one of OUTPUT_FORMATS ('aiff', 'flac', 'wav', 'mp3',
+            'aac'). Default 'aiff'.
+        bitrate: kbps for lossy formats (mp3/aac); ignored for lossless
         compression_level: FLAC compression level 0-12 (default: 8)
 
     Returns:
         Tuple of (success: bool, message: str)
     """
+    if output_format not in OUTPUT_FORMATS:
+        return False, f"unknown output format: {output_format}"
     # Validate input file
     if not validate_file(input_file):
         return False, f"not a supported audio file: {Path(input_file).name}"
@@ -240,24 +337,28 @@ def normalize_audio(
         f"print_format=summary"
     )
 
-    # Codec selection. Both are lossless; AIFF is uncompressed PCM (24-bit,
-    # big-endian) which every Pioneer CDJ/XDJ plays natively. FLAC is smaller
-    # but only supported on newer gear and only up to 48kHz.
-    if output_format == 'aiff':
-        codec_args = ['-c:a', 'pcm_s24be', '-write_id3v2', '1']
-    else:
-        codec_args = ['-c:a', 'flac', '-compression_level', str(compression_level)]
+    art = OUTPUT_FORMATS[output_format]['art']
+
+    # Cover-art stream mapping is per-container: WAV can't carry a picture at
+    # all, and .m4a needs the stream flagged as attached_pic or the muxer
+    # refuses it.
+    art_map_args = [] if art is None else ['-map', '0:v?']
+    art_out_args = []
+    if art is not None:
+        art_out_args = ['-c:v', 'copy']       # copy cover art without re-encoding
+        if art == 'attached_pic':
+            art_out_args += ['-disposition:v', 'attached_pic']
 
     cmd = [
         resolve_ffmpeg(),
         '-i', input_file,
         '-map', '0:a',            # explicit audio stream
-        '-map', '0:v?',           # cover art if present (? = optional, no error if absent)
+        *art_map_args,            # cover art if present (? = optional, no error if absent)
         '-af', loudnorm_filter,
         '-ar', '44100',           # loudnorm outputs 192kHz by default; pin to 44.1k
                                   # (rekordbox/CDJs reject audio above 48kHz)
-        *codec_args,
-        '-c:v', 'copy',           # copy cover art without re-encoding
+        *codec_args(output_format, bitrate, compression_level),
+        *art_out_args,
         '-map_metadata', '0',     # copy all metadata tags
         '-y',  # Overwrite output file if exists
         output_file
@@ -285,18 +386,18 @@ def normalize_audio(
 def get_output_filename(input_file: str, destination_folder: str,
                         output_format: str = DEFAULT_OUTPUT_FORMAT) -> str:
     """
-    Generate output filename by replacing extension with .aiff or .flac.
+    Generate output filename with the extension for the chosen format.
 
     Args:
         input_file: Path to input file
         destination_folder: Destination folder path
-        output_format: 'aiff' or 'flac'
+        output_format: one of OUTPUT_FORMATS
 
     Returns:
         Full path to output file
     """
     input_path = Path(input_file)
-    ext = '.aiff' if output_format == 'aiff' else '.flac'
+    ext = OUTPUT_FORMATS[output_format]['ext']
     output_name = input_path.stem + ext
     return str(Path(destination_folder) / output_name)
 

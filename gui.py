@@ -37,10 +37,18 @@ BTN_FILL = "#0f2c1c"
 BTN_FILL_HOVER = "#1c5334"
 BTN_FILL_DISABLED = "#0a1a11"
 
-MONO = ("Menlo", 13)
-MONO_TITLE = ("Menlo", 21, "bold")
-MONO_STATUS = ("Menlo", 14, "bold")
-MONO_BTN = ("Menlo", 12, "bold")
+# Cross-platform monospace: Menlo (macOS), Consolas (Windows), else generic.
+if sys.platform == "darwin":
+    MONO_FAMILY = "Menlo"
+elif sys.platform.startswith("win"):
+    MONO_FAMILY = "Consolas"
+else:
+    MONO_FAMILY = "DejaVu Sans Mono"
+
+MONO = (MONO_FAMILY, 13)
+MONO_TITLE = (MONO_FAMILY, 21, "bold")
+MONO_STATUS = (MONO_FAMILY, 14, "bold")
+MONO_BTN = (MONO_FAMILY, 12, "bold")
 
 # Geometry (everything drawn on the canvas)
 FRAME_X0, FRAME_X1 = 40, WIN_W - 40
@@ -108,23 +116,25 @@ DJ_OUTRO = [
 
 ABOUT_LINES = [
     "---- about -------------------------------------------------",
-    "Psi'sDJnormalizerButInAgoodWay",
+    "Levels every track to -12 LUFS (EBU R128): one consistent,",
+    "club-ready loudness across your whole set. LUFS is how loud a",
+    "track *actually* sounds to human ears. Originals untouched.",
     "",
-    "Levels every track to -12 LUFS (EBU R128) so your set plays at",
-    "one consistent, club-ready loudness. No more riding the trim.",
+    "---- formats (FORMAT cycles; BITRATE for MP3/AAC) -----------",
+    "AIFF  lossless 24-bit, uncompressed. The safe default.",
+    "      Plays on ALL Pioneer/CDJ gear. Biggest files.",
+    "FLAC  lossless, compressed (much smaller). NEWER GEAR ONLY:",
+    "      CDJ-3000 / 2000NXS2 / TOUR1, XDJ-1000MK2 / RX2 / RX3 /",
+    "      XZ / AZ, Opus Quad. NOT: CDJ-2000NXS & older, CDJ-900,",
+    "      XDJ-700 / 1000 / RX.",
+    "WAV   lossless 16-bit, uncompressed. Plays on ALL gear.",
+    "      (24-bit WAV upsets some CDJs; WAV can't hold cover art.)",
+    "MP3   lossy, 320/256/192 kbps, tiny files. Plays on ALL gear.",
+    "AAC   lossy (.m4a), better than MP3 at the same bitrate.",
+    "      All modern gear: CDJ-350/850/900/2000 onward, all XDJs.",
     "",
-    "LUFS = Loudness Units Full Scale: how loud a track *actually*",
-    "sounds to human ears. -12 LUFS is hot, punchy and consistent",
-    "with modern dance masters, with headroom to spare.",
-    "",
-    "AIFF = uncompressed, lossless. Plays on ALL Pioneer/CDJ gear.",
-    "FLAC = compressed, lossless, smaller files. Newer gear only.",
-    "",
-    "Your originals are never touched.",
-    "",
-    "Requires FFmpeg (GPLv3) — the engine that does the heavy",
-    "lifting. It's bundled inside this app, so you install nothing.",
-    "Source: ffmpeg.org.  Made by Picnic Labs / Psi.",
+    "Requires FFmpeg (GPLv3) — bundled inside this app, so you",
+    "install nothing. Source: ffmpeg.org.  Made by Picnic Labs / Psi.",
     "------------------------------------------------------------",
 ]
 
@@ -141,6 +151,7 @@ class NormalizerGUI:
         self.src_dir = None
         self.dst_dir = None
         self.output_format = normalizer.DEFAULT_OUTPUT_FORMAT
+        self.bitrate = normalizer.DEFAULT_BITRATE
         self.msg_q: queue.Queue = queue.Queue()
         self.worker = None
 
@@ -148,6 +159,7 @@ class NormalizerGUI:
         self.buttons = {}        # name -> dict(rect, text, cmd, label, ...)
         self._btns_enabled = True
         self._hover_name = None
+        self._armed = None       # button pressed but not yet released
 
         self._build_ui()
         self._poll_queue()
@@ -187,24 +199,35 @@ class NormalizerGUI:
         self.canvas.create_rectangle(
             FRAME_X0, BTN_BAR_TOP, FRAME_X1, BTN_BAR_BOT, outline=DIM_GREEN, width=1)
 
+        # (name, label, command, width weight) — weights keep the long labels
+        # readable and the short BITRATE button compact.
         specs = [
-            ("source", "[ SOURCE ]", self.pick_source),
-            ("dest", "[ DESTINATION ]", self.pick_dest),
-            ("fmt", "FORMAT: AIFF", self.toggle_format),
-            ("about", "ABOUT", self.show_about),
-            ("go", "> NORMALIZE", self.start),
+            ("source", "[ SOURCE ]", self.pick_source, 1.1),
+            ("dest", "[ DESTINATION ]", self.pick_dest, 1.5),
+            ("fmt", "FORMAT: AIFF", self.toggle_format, 1.3),
+            ("rate", "----", self.toggle_bitrate, 0.7),
+            ("about", "ABOUT", self.show_about, 0.9),
+            ("go", "> NORMALIZE", self.start, 1.5),
         ]
         cy = (BTN_BAR_TOP + BTN_BAR_BOT) // 2
-        span = (FRAME_X1 - FRAME_X0) / len(specs)
-        btn_w = int(span - 14)
-        for i, (name, label, cmd) in enumerate(specs):
-            cx = int(FRAME_X0 + span * (i + 0.5))
-            self._mk_btn(name, cx, cy, btn_w, label, cmd)
+        total_w = FRAME_X1 - FRAME_X0
+        unit = total_w / sum(w for *_, w in specs)
+        x = FRAME_X0
+        for name, label, cmd, weight in specs:
+            span = unit * weight
+            self._mk_btn(name, int(x + span / 2), cy, int(span - 12), label, cmd)
+            x += span
+        self._update_bitrate_btn()
 
         # One canvas-wide dispatcher for all buttons — reliable coordinate
         # hit-testing instead of fragile per-item (text-glyph) bindings.
-        self.canvas.bind("<Button-1>", self._canvas_click)
+        # Press arms the button; the command fires on release only if the
+        # release lands inside the same button (standard button semantics —
+        # a click never silently disappears, and a drag-away cancels).
+        self.canvas.bind("<Button-1>", self._canvas_press)
+        self.canvas.bind("<ButtonRelease-1>", self._canvas_release)
         self.canvas.bind("<Motion>", self._canvas_motion)
+        self.canvas.bind("<Leave>", self._canvas_leave)
 
     def _mk_btn(self, name, cx, cy, w, label, cmd):
         x0, y0 = cx - w // 2, cy - BTN_H // 2
@@ -215,7 +238,7 @@ class NormalizerGUI:
         txt = self.canvas.create_text(cx, cy, text=label, fill=GREEN, font=MONO_BTN)
         self.buttons[name] = {"rect": rect, "text": txt, "cmd": cmd,
                               "label": label, "bounds": (x0, y0, x1, y1),
-                              "confirmed": False}
+                              "confirmed": False, "enabled": True}
         # NB: no per-item bindings here. Clicks/hover are dispatched by
         # coordinate from canvas-wide handlers (see _hit / _canvas_click) — a
         # canvas *text* item is only "hit" on its glyph pixels, so binding the
@@ -230,10 +253,30 @@ class NormalizerGUI:
                 return name
         return None
 
-    def _canvas_click(self, event):
+    def _btn_active(self, name):
+        return self._btns_enabled and self.buttons[name]["enabled"]
+
+    def _canvas_press(self, event):
         name = self._hit(event.x, event.y)
-        if name:
-            self._on_click(name)
+        if not (name and self._btn_active(name)):
+            self._armed = None
+            return
+        self._armed = name
+        b = self.buttons[name]
+        # Immediate, obvious press feedback: invert colours and force a paint.
+        self.canvas.itemconfigure(b["rect"], fill=GREEN, outline=BRIGHT, width=2)
+        self.canvas.itemconfigure(b["text"], fill=DARK)
+        self.canvas.update_idletasks()
+
+    def _canvas_release(self, event):
+        armed, self._armed = self._armed, None
+        if not armed:
+            return
+        released_on = self._hit(event.x, event.y)
+        if released_on == armed and self._btn_active(armed):
+            self._on_click(armed)
+        else:
+            self._reset_btn(armed)  # drag-away cancels
 
     def _canvas_motion(self, event):
         name = self._hit(event.x, event.y)
@@ -245,25 +288,24 @@ class NormalizerGUI:
         if name:
             self._on_hover(name, True)
 
+    def _canvas_leave(self, _event):
+        if self._hover_name:
+            self._on_hover(self._hover_name, False)
+            self._hover_name = None
+
     def _on_hover(self, name, entering):
-        if not self._btns_enabled:
+        if not self._btn_active(name):
             return
         b = self.buttons[name]
         self.canvas.itemconfigure(
             b["rect"], fill=BTN_FILL_HOVER if entering else BTN_FILL,
             outline=GREEN if entering else DIM_GREEN, width=2 if entering else 1)
         self.canvas.itemconfigure(b["text"], fill=BRIGHT if entering else GREEN)
-        self.canvas.configure(cursor="pointinghand" if entering else "")
+        # 'hand2' is the pointing hand on every Tk platform (aqua/win32/x11)
+        self.canvas.configure(cursor="hand2" if entering else "")
 
     def _on_click(self, name):
-        if not self._btns_enabled:
-            return
         b = self.buttons[name]
-        # Immediate, obvious press: invert colours and force a paint before any
-        # blocking work (folder dialogs block the event loop).
-        self.canvas.itemconfigure(b["rect"], fill=GREEN, outline=BRIGHT, width=2)
-        self.canvas.itemconfigure(b["text"], fill=DARK)
-        self.canvas.update_idletasks()
         try:
             b["cmd"]()
         finally:
@@ -271,7 +313,7 @@ class NormalizerGUI:
 
     def _reset_btn(self, name):
         b = self.buttons[name]
-        if not self._btns_enabled and name != "go":
+        if (not self._btns_enabled and name != "go") or not b["enabled"]:
             fill, outline, tc = BTN_FILL_DISABLED, DIM_GREEN, DIM_GREEN
         else:
             fill, outline, tc = BTN_FILL, DIM_GREEN, GREEN
@@ -362,14 +404,36 @@ class NormalizerGUI:
                          else "Destination set. Now choose a SOURCE.")
 
     def toggle_format(self):
-        self.output_format = "flac" if self.output_format == "aiff" else "aiff"
+        fmts = list(normalizer.OUTPUT_FORMATS)
+        self.output_format = fmts[(fmts.index(self.output_format) + 1) % len(fmts)]
         self.canvas.itemconfigure(
             self.buttons["fmt"]["text"], text=f"FORMAT: {self.output_format.upper()}")
-        note = ("AIFF - uncompressed, plays on ALL Pioneer/CDJ gear"
-                if self.output_format == "aiff"
-                else "FLAC - compressed, smaller, newer gear only")
-        self._print(f">> format : {note}", GREEN)
-        self._status(f"Output format: {self.output_format.upper()}")
+        self._update_bitrate_btn()
+        info = normalizer.OUTPUT_FORMATS[self.output_format]
+        self._print(f">> format : {self.output_format.upper()} - {info['summary']}", GREEN)
+        self._print(f">>          {info['gear']}", DIM_GREEN)
+        self._status(f"Output format: {self._fmt_desc()}")
+
+    def toggle_bitrate(self):
+        rates = list(normalizer.BITRATES)
+        self.bitrate = rates[(rates.index(self.bitrate) + 1) % len(rates)]
+        self._update_bitrate_btn()
+        self._print(f">> bitrate : {self.bitrate} kbps", GREEN)
+        self._status(f"Output format: {self._fmt_desc()}")
+
+    def _fmt_desc(self):
+        if normalizer.OUTPUT_FORMATS[self.output_format]['lossy']:
+            return f"{self.output_format.upper()} {self.bitrate}kbps"
+        return self.output_format.upper()
+
+    def _update_bitrate_btn(self):
+        """BITRATE applies to MP3/AAC only; grey it out for lossless formats."""
+        b = self.buttons["rate"]
+        lossy = normalizer.OUTPUT_FORMATS[self.output_format]['lossy']
+        b["enabled"] = lossy
+        b["label"] = f"{self.bitrate}k" if lossy else "----"
+        self.canvas.itemconfigure(b["text"], text=b["label"])
+        self._reset_btn("rate")
 
     def show_about(self):
         for ln in ABOUT_LINES:
@@ -411,6 +475,7 @@ class NormalizerGUI:
     def _run(self):
         q = self.msg_q
         fmt = self.output_format
+        bitrate = self.bitrate
         try:
             files = normalizer.find_audio_files(Path(self.src_dir))
             if not files:
@@ -422,7 +487,8 @@ class NormalizerGUI:
             for i, f in enumerate(files, 1):
                 q.put(("log", (f"[{i}/{len(files)}] {f.name}", GREEN)))
                 out = normalizer.get_output_filename(str(f), self.dst_dir, fmt)
-                success, message = normalizer.normalize_audio(str(f), out, output_format=fmt)
+                success, message = normalizer.normalize_audio(
+                    str(f), out, output_format=fmt, bitrate=bitrate)
                 if success:
                     ok += 1
                     q.put(("log", (f"    ok  {message}", DIM_GREEN)))

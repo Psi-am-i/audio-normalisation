@@ -3,6 +3,7 @@
   "destination_folder": "/path/to/your/output/folder",
   "target_lufs": -12,
   "output_format": "aiff",
+  "bitrate": 320,
   "debounce_seconds": 2,
   "log_file": "~/Library/Logs/audio-normalizer.log"
 }

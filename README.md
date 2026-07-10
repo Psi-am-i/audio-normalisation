@@ -5,7 +5,7 @@ Professional audio normalization system for DJing. Normalizes music files to con
 ## Features
 
 - **Consistent Loudness:** Normalizes all tracks to -12 LUFS using EBU R128 standard
-- **Lossless Output:** Files converted to AIFF (default) or FLAC for maximum quality
+- **Five Output Formats:** Lossless AIFF (default), FLAC, WAV — or lossy MP3/AAC at 320/256/192 kbps
 - **Two Modes:** Manual batch processing or automatic folder watching
 - **Preserves Originals:** Never modifies source files
 - **Club-Optimized:** No compression, just loudness normalization
@@ -97,7 +97,8 @@ Edit `config.json` to set your folders:
   "watch_folder": "/path/to/your/watch/folder",
   "destination_folder": "/path/to/your/output/folder",
   "target_lufs": -12,
-  "output_format": "aiff"
+  "output_format": "aiff",
+  "bitrate": 320
 }
 ```
 
@@ -171,21 +172,37 @@ The tool uses ffmpeg's `loudnorm` filter with a two-pass process for accurate lo
 - Provides good headroom for system dynamics
 - Consistent with streaming platform standards
 
-### Output Format: AIFF vs FLAC
+### Output Formats & Pioneer Gear Compatibility
 
-The output format is set via the `output_format` key in `config.json` (default: `aiff`).
-Both are lossless — the choice is compatibility vs file size.
+Five output formats are available in every mode (CLI menu, GUI FORMAT/BITRATE
+buttons, `output_format` + `bitrate` in `config.json`). All output is pinned to
+44.1 kHz — CDJs/rekordbox reject anything above 48 kHz.
 
-**AIFF (default):**
-- **Uncompressed:** 24-bit big-endian PCM, bit-perfect quality
-- **Universal:** Plays natively on every Pioneer CDJ/XDJ and standalone gear
-- **Larger:** Same size as WAV
+| Format | Type | Bitrate | Pioneer support |
+|--------|------|---------|-----------------|
+| **AIFF** (default) | Lossless, uncompressed 24-bit | — | **ALL** CDJ/XDJ gear |
+| **WAV** | Lossless, uncompressed 16-bit | — | **ALL** CDJ/XDJ gear |
+| **FLAC** | Lossless, compressed (much smaller) | — | **Newer gear only** — see below |
+| **MP3** | Lossy (libmp3lame, ID3v2.3) | 320/256/192 kbps | **ALL** CDJ/XDJ gear |
+| **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | All **modern** gear — see below |
 
-**FLAC:**
-- **Lossless:** Bit-perfect audio quality
-- **Compressed:** Smaller than WAV/AIFF (~50-60% size)
-- **Metadata:** Supports tags (unlike WAV)
-- **Universal:** Plays on all modern DJ gear
+**FLAC — supported:** CDJ-3000, CDJ-2000NXS2, CDJ-TOUR1, XDJ-1000MK2, XDJ-RX2,
+XDJ-RX3, XDJ-XZ, XDJ-AZ, Opus Quad, Omnis Duo (and newer).
+**FLAC — NOT supported:** CDJ-2000NXS and older, CDJ-900/900NXS, CDJ-850,
+CDJ-350, XDJ-700, XDJ-1000 (mk1), XDJ-RX (mk1), XDJ-RR.
+
+**AAC — supported** on all modern players (CDJ-350/850/900/2000 onward and every
+XDJ). Only ancient CD-only decks (CDJ-800/1000 etc.) can't read it.
+
+**Why 16-bit WAV?** ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE`
+header that some CDJ firmware rejects. 16-bit WAV plays everywhere; if you want
+24-bit lossless, use AIFF (that's why it's the default). Note WAV also cannot
+carry embedded cover art — use AIFF/FLAC to keep artwork.
+
+**AAC encoder note:** on macOS the bundled/detected ffmpeg uses Apple's
+AudioToolbox encoder (`aac_at`), which genuinely hits 320 kbps. ffmpeg's
+built-in `aac` encoder (used on Windows/Linux) caps out around ~224 kbps for
+44.1 kHz stereo even when 320 is requested.
 
 ## File Structure
 
@@ -212,9 +229,12 @@ audio-normalisation/
 - AIFF (Apple Uncompressed)
 - OGG (Vorbis)
 
-**Output formats** (set via `output_format` in `config.json`):
-- AIFF (lossless, uncompressed — default)
+**Output formats** (CLI menu / GUI buttons / `output_format` in `config.json`):
+- AIFF (lossless, uncompressed 24-bit — default)
 - FLAC (lossless, compressed)
+- WAV (lossless, uncompressed 16-bit)
+- MP3 (lossy, 320/256/192 kbps)
+- AAC/.m4a (lossy, 320/256/192 kbps)
 
 ## Troubleshooting
 
@@ -287,8 +307,9 @@ Look for "Output Integrated" value - should be close to -12.0 LUFS.
 - **Target loudness:** -12 LUFS (Loudness Units relative to Full Scale)
 - **True peak limit:** -1.5 dB (prevents inter-sample peaks)
 - **Loudness range:** 11 LU (preserves dynamics)
-- **Output format:** AIFF (24-bit PCM, default) or FLAC
+- **Output formats:** AIFF (24-bit PCM, default), FLAC, WAV (16-bit PCM), MP3, AAC
 - **FLAC compression:** Level 8 (maximum, when FLAC selected)
+- **Lossy bitrates:** 320 (default) / 256 / 192 kbps CBR
 - **Processing:** Two-pass for accuracy
 
 ## License
