@@ -1,0 +1,123 @@
+name: Release builds
+
+# Builds the distributable apps. PyInstaller cannot cross-compile, so each OS
+# bundle is produced on a runner of that OS:
+#   - windows-latest -> PsiDJNormalizer-windows.zip (.exe onedir + ffmpeg.exe)
+#   - macos-latest   -> PsiDJNormalizer-macos.zip   (.app, Apple Silicon)
+# On a v* tag the zips are attached to a GitHub release. Also runnable by hand
+# from the Actions tab (workflow_dispatch) to get artifacts without a release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg, Tk and a virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg python3-tk xvfb
+      - name: Format engine tests (all formats + bitrates, LUFS re-measured)
+        run: python3 tests/test_formats.py
+      - name: GUI smoke test (virtual display)
+        run: xvfb-run -a python3 tests/test_gui_smoke.py
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download static ffmpeg (GPL build, gyan.dev)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip' -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffbuild
+          $ff = Get-ChildItem ffbuild -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          Copy-Item $ff.FullName "$env:GITHUB_WORKSPACE\ffmpeg.exe"
+          & "$env:GITHUB_WORKSPACE\ffmpeg.exe" -version | Select-Object -First 1
+      - name: Generate background + install build deps
+        run: |
+          pip install pillow pyinstaller
+          python packaging/make_bg.py
+      - name: PyInstaller build
+        env:
+          FFMPEG_BINARY_PATH: ${{ github.workspace }}\ffmpeg.exe
+        run: pyinstaller --clean --noconfirm --distpath dist-win --workpath build-win packaging/normalizer-gui-win.spec
+      - name: Add licenses + README, zip
+        shell: bash
+        run: |
+          source packaging/lib_licenses.sh
+          FFVER="$(./ffmpeg.exe -version | head -1)"
+          write_ffmpeg_licenses "dist-win/PsiDJNormalizer/licenses" "$FFVER"
+          cat > "dist-win/PsiDJNormalizer/README.txt" <<'EOF'
+          Psi'sDJnormalizerButInAgoodWay (Windows)
+          ========================================
+          1. Unzip the whole folder somewhere (keep the files together).
+          2. Double-click PsiDJNormalizer.exe.
+             Windows SmartScreen may warn about an unsigned app:
+             "More info" -> "Run anyway".
+          3. In the window:
+             - [ SOURCE ]       pick the folder with your tracks
+             - [ DESTINATION ]  pick where the normalized files go
+             - FORMAT           cycles AIFF / FLAC / WAV / MP3 / AAC
+             - 320k             bitrate for MP3/AAC (cycles 320/256/192)
+             - > NORMALIZE      go
+          Your originals are never changed. Everything is levelled to -12 LUFS.
+          This app bundles FFmpeg (GPLv3) - see the licenses folder.
+          EOF
+          cd dist-win && 7z a ../PsiDJNormalizer-windows.zip PsiDJNormalizer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PsiDJNormalizer-windows
+          path: PsiDJNormalizer-windows.zip
+
+  macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install a Python with a click-safe Tk (>= 8.6.13)
+        run: brew install python-tk@3.13
+      - name: Generate background (repo has no personal photo)
+        run: |
+          python3 -m venv bgvenv
+          bgvenv/bin/pip install --quiet pillow
+          bgvenv/bin/python packaging/make_bg.py
+      - name: Build .app
+        env:
+          PYTHON: /opt/homebrew/bin/python3.13
+        run: packaging/build_gui_app.sh
+      - name: Rename zip
+        run: mv packaging/dist-gui/PsiDJNormalizer.zip PsiDJNormalizer-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PsiDJNormalizer-macos
+          path: PsiDJNormalizer-macos.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Create release and attach builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" --generate-notes \
+            PsiDJNormalizer-windows.zip PsiDJNormalizer-macos.zip \
+          || gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --clobber PsiDJNormalizer-windows.zip PsiDJNormalizer-macos.zip
