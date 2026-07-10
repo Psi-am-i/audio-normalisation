@@ -57,5 +57,6 @@ tinted = ImageOps.colorize(
 )
 tinted = ImageEnhance.Brightness(tinted).enhance(0.70)
 tinted = ImageEnhance.Contrast(tinted).enhance(1.05)
+DST.parent.mkdir(parents=True, exist_ok=True)  # gui_assets/ is fully gitignored
 tinted.save(DST)
 print(f"wrote {DST} ({WIN_W}x{WIN_H})")
