@@ -58,8 +58,48 @@ fi
 FFVER="$("$FFMPEG_BIN" -version 2>/dev/null | head -1)"
 echo "    $FFVER"
 
+echo "==> Selecting a Python with a click-safe Tk (>= 8.6.13)"
+# Tk 8.6.12 and older have broken mouse-event handling on modern macOS —
+# clicks don't register until the window is moved (cpython #110218). The old
+# app was built on Tk 8.6.12, which was exactly the "click twice" bug. Gate
+# hard so a bad interpreter can never produce a broken build again.
+tk_ok() {
+    "$1" - <<'PYEOF' 2>/dev/null
+import sys, tkinter
+r = tkinter.Tk()
+level = tuple(int(x) for x in r.tk.call('info', 'patchlevel').split('.'))
+r.destroy()
+sys.exit(0 if level >= (8, 6, 13) else 1)
+PYEOF
+}
+
+BUILD_PYTHON=""
+for cand in "${PYTHON:-}" python3.14 python3.13 python3.12 python3; do
+    [[ -n "$cand" ]] || continue
+    command -v "$cand" >/dev/null || continue
+    if tk_ok "$(command -v "$cand")"; then
+        BUILD_PYTHON="$(command -v "$cand")"
+        break
+    fi
+done
+if [[ -z "$BUILD_PYTHON" ]]; then
+    echo "ERROR: no Python found with tkinter + Tk >= 8.6.13."
+    echo "  Fix: brew install python-tk@3.14   (or a python.org 3.12+ installer)"
+    echo "  Or set PYTHON=/path/to/python before running this script."
+    exit 1
+fi
+echo "    Using $BUILD_PYTHON ($("$BUILD_PYTHON" -c 'import tkinter; r=tkinter.Tk(); print("Tk", r.tk.call("info","patchlevel")); r.destroy()'))"
+
+# Encoder gate: MP3 and AAC output need these in the bundled ffmpeg.
+for enc in libmp3lame aac; do
+    if ! "$FFMPEG_BIN" -hide_banner -encoders 2>/dev/null | grep -q " $enc "; then
+        echo "ERROR: bundled ffmpeg is missing the '$enc' encoder."
+        exit 1
+    fi
+done
+
 echo "==> Creating build virtualenv"
-python3 -m venv "$VENV_DIR"
+"$BUILD_PYTHON" -m venv "$VENV_DIR"
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
 pip install --quiet --upgrade pip
@@ -94,8 +134,11 @@ Psi'sDJnormalizerButInAgoodWay
 3. In the window:
    - [ SOURCE ]       pick the folder with your tracks
    - [ DESTINATION ]  pick where the normalized files go
-   - FORMAT           toggles AIFF <-> FLAC
-                      (AIFF plays on ALL Pioneer/CDJ gear; FLAC is smaller)
+   - FORMAT           cycles AIFF / FLAC / WAV / MP3 / AAC
+                      (AIFF & WAV & MP3 play on ALL Pioneer/CDJ gear;
+                       FLAC needs newer gear; AAC needs anything modern.
+                       Hit ABOUT in the app for the full rundown.)
+   - 320k             bitrate for MP3/AAC (click to cycle 320/256/192)
    - > NORMALIZE      go
 
 Your originals are never changed. Everything is levelled to -12 LUFS.

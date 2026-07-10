@@ -72,7 +72,7 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'PsiDJNormalizer',
         'CFBundleDisplayName': "Psi'sDJnormalizerButInAgoodWay",
-        'CFBundleShortVersionString': '1.0',
+        'CFBundleShortVersionString': '1.1',
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '10.13',
     },
