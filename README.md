@@ -1,4 +1,4 @@
-# Audio Normalization DJ's - by Picnic Labs
+# Psi's DJ Normalization (in a good way!) - by Picnic Labs
 
 Professional audio normalization system for DJing. Normalizes music files to consistent -12 LUFS loudness for club playback on high-quality sound systems. Never fiddle with trim again...
 
@@ -8,7 +8,8 @@ Professional audio normalization system for DJing. Normalizes music files to con
 - **Five Output Formats:** Lossless AIFF (default), FLAC, WAV — or lossy MP3/AAC at 320/256/192 kbps
 - **Two Modes:** Manual batch processing or automatic folder watching
 - **Preserves Originals:** Never modifies source files
-- **Club-Optimized:** No compression, just loudness normalization
+- **Club-Optimized:** No compression on lossless files, just loudness normalization
+- Know exactly what Pioneer/AlphaTheta gear your files will work on
 - **Format Support:** M4A, WAV, FLAC, MP3, AIFF, OGG
 
 ## Download the app (easiest — nothing to install)
@@ -21,11 +22,8 @@ Python and ffmpeg are bundled inside.
 
 1. Unzip and drag `PsiDJNormalizer.app` to your Applications folder.
 2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
-   - **Right-click → Open → Open.** It will give an error; go to System
-     Settings → Privacy & Security, scroll down and allow it ("Open Anyway"),
-     then open again (needed once only), or
-   - **Self-sign it** — one Terminal command before first launch, and it
-     behaves like any normal app from then on:
+   - **Right-click → Open → Open** It will give an error. Go to System & Security, scroll down and say allow. Then open again (only need to doo this once), or
+   - **Self-sign it** — Before launch, open Terminal and paste the line below. Then it will behave like any normal app from then on:
      ```bash
      codesign --force --deep -s - /Applications/PsiDJNormalizer.app && xattr -rd com.apple.quarantine /Applications/PsiDJNormalizer.app
      ```
