@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Psi'sDJnormalizerButInAgoodWay
+Psi's DJnormalizerButInAgoodWay
 
 A green-terminal-styled GUI front-end over the normalizer core. Folder pickers
 instead of typed paths, a dark-green tinted background photo, and one bad DJ
@@ -24,7 +24,7 @@ from tkinter import filedialog
 
 import normalizer
 
-APP_TITLE = "Psi'sDJnormalizerButInAgoodWay"
+APP_TITLE = "Psi's DJnormalizerButInAgoodWay"
 WIN_W, WIN_H = 900, 680
 
 # Palette
@@ -122,9 +122,12 @@ DJ_OUTRO = [
 
 ABOUT_LINES = [
     "---- about -------------------------------------------------",
-    "Levels every track to -12 LUFS (EBU R128): one consistent,",
-    "club-ready loudness across your whole set. LUFS is how loud a",
-    "track *actually* sounds to human ears. Originals untouched.",
+    "Made for DJ's. Every file this app makes will play on",
+    "Pioneer / AlphaTheta gear as shown below. It also levels",
+    "every track, so no more fighting the trim: one consistent,",
+    "club-ready loudness (-12 LUFS, EBU R128) across your whole",
+    "set. LUFS is how loud a track *actually* sounds to human",
+    "ears. Originals untouched.",
     "",
     "---- formats (click FORMAT / BITRATE to pick) ---------------",
     "AIFF  lossless 24-bit, uncompressed. The safe default.",
@@ -427,8 +430,8 @@ class NormalizerGUI:
     def _status(self, text, color=BRIGHT):
         self.canvas.itemconfigure(self.status_item, text=text, fill=color)
 
-    def _print(self, text="", color=GREEN):
-        self.lines.append((text, color))
+    def _print(self, text="", color=GREEN, font=None):
+        self.lines.append((text, color, font or MONO))
         self._render_log()
 
     def _render_log(self):
@@ -437,9 +440,9 @@ class NormalizerGUI:
             c.delete("logline")
             y = LOG_TOP
             overflow = False
-            for text, color in self.lines:
+            for text, color, font in self.lines:
                 item = c.create_text(LOG_X, y, anchor="nw", text=text, fill=color,
-                                     font=MONO, width=LOG_W, tags="logline")
+                                     font=font, width=LOG_W, tags="logline")
                 bb = c.bbox(item)
                 y = bb[3] + LINE_GAP
                 if bb[3] > LOG_BOTTOM:
@@ -530,8 +533,18 @@ class NormalizerGUI:
         self._reset_btn("rate")
 
     def show_about(self):
+        # About must fit on screen in one go: clear the log and shrink the
+        # font until every line fits the frame, in height and width.
+        f = tkfont.Font(family=MONO_FAMILY, size=MONO[1])
+        longest = max(ABOUT_LINES, key=len)
+        while f.cget("size") > 8 and (
+                len(ABOUT_LINES) * (f.metrics("linespace") + LINE_GAP)
+                > LOG_BOTTOM - LOG_TOP
+                or f.measure(longest) > LOG_W):
+            f.configure(size=f.cget("size") - 1)
+        self.lines = []
         for ln in ABOUT_LINES:
-            self._print(ln, DIM_GREEN if ln.startswith("-") else GREEN)
+            self._print(ln, DIM_GREEN if ln.startswith("-") else GREEN, font=f)
         self._status("That's the story. Now go level some tracks.")
 
     def start(self):
