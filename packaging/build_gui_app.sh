@@ -120,32 +120,8 @@ STAGE="$BUILD_DIR/stage/$APP_NAME"
 rm -rf "$BUILD_DIR/stage"
 mkdir -p "$STAGE"
 cp -R "$APP_DIR" "$STAGE/"
-cat > "$STAGE/README.txt" <<'READMEEOF'
-Psi'sDJnormalizerButInAgoodWay
-==============================
-
-1. Double-click the app.
-
-2. The FIRST time, macOS blocks unsigned apps ("unidentified developer").
-   -> Right-click (or Control-click) the app -> Open -> Open.
-      On macOS Sequoia: System Settings -> Privacy & Security -> "Open Anyway".
-   After this one time, it opens normally.
-
-3. In the window:
-   - [ SOURCE ]       pick the folder with your tracks
-   - [ DESTINATION ]  pick where the normalized files go
-   - FORMAT           cycles AIFF / FLAC / WAV / MP3 / AAC
-                      (AIFF & WAV & MP3 play on ALL Pioneer/CDJ gear;
-                       FLAC needs newer gear; AAC needs anything modern.
-                       Hit ABOUT in the app for the full rundown.)
-   - 320k             bitrate for MP3/AAC (click to cycle 320/256/192)
-   - > NORMALIZE      go
-
-Your originals are never changed. Everything is levelled to -12 LUFS.
-Enjoy the terrible jokes.
-
-This app bundles FFmpeg (GPLv3). See the "licenses" folder.
-READMEEOF
+# Canonical recipient README, shared with the Windows build (release.yml)
+cp "$PKG_DIR/APP_README.txt" "$STAGE/README.txt"
 
 write_ffmpeg_licenses "$STAGE/licenses" "$FFVER"
 

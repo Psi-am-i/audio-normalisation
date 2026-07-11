@@ -59,22 +59,8 @@ jobs:
           source packaging/lib_licenses.sh
           FFVER="$(./ffmpeg.exe -version | head -1)"
           write_ffmpeg_licenses "dist-win/PsiDJNormalizer/licenses" "$FFVER"
-          cat > "dist-win/PsiDJNormalizer/README.txt" <<'EOF'
-          Psi'sDJnormalizerButInAgoodWay (Windows)
-          ========================================
-          1. Unzip the whole folder somewhere (keep the files together).
-          2. Double-click PsiDJNormalizer.exe.
-             Windows SmartScreen may warn about an unsigned app:
-             "More info" -> "Run anyway".
-          3. In the window:
-             - [ SOURCE ]       pick the folder with your tracks
-             - [ DESTINATION ]  pick where the normalized files go
-             - FORMAT           cycles AIFF / FLAC / WAV / MP3 / AAC
-             - 320k             bitrate for MP3/AAC (cycles 320/256/192)
-             - > NORMALIZE      go
-          Your originals are never changed. Everything is levelled to -12 LUFS.
-          This app bundles FFmpeg (GPLv3) - see the licenses folder.
-          EOF
+          # Canonical recipient README, shared with the macOS build
+          cp packaging/APP_README.txt dist-win/PsiDJNormalizer/README.txt
           cd dist-win && 7z a ../PsiDJNormalizer-windows.zip PsiDJNormalizer
       - uses: actions/upload-artifact@v4
         with:

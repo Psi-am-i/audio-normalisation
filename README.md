@@ -21,9 +21,11 @@ Python and ffmpeg are bundled inside.
 
 1. Unzip and drag `PsiDJNormalizer.app` to your Applications folder.
 2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
-   - **Right-click → Open → Open** (needed once only), or
-   - **Self-sign it** — one Terminal command, and it behaves like any normal
-     app from then on:
+   - **Right-click → Open → Open.** It will give an error; go to System
+     Settings → Privacy & Security, scroll down and allow it ("Open Anyway"),
+     then open again (needed once only), or
+   - **Self-sign it** — one Terminal command before first launch, and it
+     behaves like any normal app from then on:
      ```bash
      codesign --force --deep -s - /Applications/PsiDJNormalizer.app && xattr -rd com.apple.quarantine /Applications/PsiDJNormalizer.app
      ```
