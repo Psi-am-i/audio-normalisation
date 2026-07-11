@@ -57,10 +57,10 @@ if launchctl list | grep -q "com.audiotools.normalizer"; then
     echo "=========================================="
     echo
     echo "The audio normalizer will now watch:"
-    echo "  /Users/simondavis/Library/CloudStorage/Dropbox/Open Music Watch Folder"
+    echo "  $(python3 -c 'import json; print(json.load(open("config.json"))["watch_folder"])')"
     echo
     echo "Normalized files will be saved to:"
-    echo "  /Users/simondavis/Library/CloudStorage/Dropbox/Incoming Tracks"
+    echo "  $(python3 -c 'import json; print(json.load(open("config.json"))["destination_folder"])')"
     echo
     echo "Logs can be found at:"
     echo "  ~/Library/Logs/audio-normalizer.log"

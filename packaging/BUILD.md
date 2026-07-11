@@ -3,7 +3,7 @@
 This produces `Normalizer.app` — a self-contained, double-clickable macOS app
 that bundles Python, the normalizer, and a static **ffmpeg**. Recipients install
 nothing. Double-clicking opens a Terminal window with the interactive flow
-(source folder → destination folder → AIFF/FLAC).
+(source folder → destination folder → format → bitrate, all five formats).
 
 Only the **manual** mode is shipped. The autowatch daemon (`watcher.py`) stays in
 the repo for your own use and is excluded from the app.
@@ -20,6 +20,13 @@ Outputs:
 - `packaging/dist/Normalizer.app` — the app
 - `packaging/dist/Normalizer.zip` — zip this to people (always send the zip, not
   the raw `.app`, so macOS keeps the executable bits)
+
+Everything under `packaging/build/` is an **intermediate**, not a deliverable:
+`build/pyi-dist/normalizer-cli` is the raw PyInstaller onefile binary before it
+is wrapped into the `.app`, and `build/stage/` is a staging copy of the app used
+only to produce the zip. If you're looking for something to run or send, use
+`packaging/dist/`. A stale `build/` can also lag behind the source — rebuild
+rather than reusing old binaries from there.
 
 ### ffmpeg source & licensing
 
@@ -55,11 +62,17 @@ For most modern (Apple Silicon) recipients the default build is fine.
 ## Gatekeeper (unsigned app)
 
 The app is **not code-signed or notarized**, so on another Mac Gatekeeper will
-block the first launch. The recipient does this once:
+block the first launch. The recipient does one of these, once:
 
-> Right-click (or Control-click) `Normalizer.app` → **Open** → **Open**.
+- Right-click (or Control-click) `Normalizer.app` → **Open** → **Open**, or
+- Self-sign it (ad-hoc) and strip the quarantine flag — same trick Radarr and
+  friends recommend; after this it behaves like any normal app:
 
-After that it launches normally by double-click.
+  ```bash
+  codesign --force --deep -s - /Applications/Normalizer.app && xattr -rd com.apple.quarantine /Applications/Normalizer.app
+  ```
+
+After either, it launches normally by double-click.
 
 To remove the warning entirely you'd need an Apple Developer ID ($99/yr) to sign
 and notarize — out of scope here. If you get one, add the identity to

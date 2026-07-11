@@ -11,11 +11,38 @@ Professional audio normalization system for DJing. Normalizes music files to con
 - **Club-Optimized:** No compression, just loudness normalization
 - **Format Support:** M4A, WAV, FLAC, MP3, AIFF, OGG
 
-## Requirements
+## Download the app (easiest — nothing to install)
 
-- macOS (for daemon mode via launchd)
+Grab the GUI app for your platform from the
+[releases page](https://github.com/Psi-am-i/audio-normalisation/releases/latest).
+Python and ffmpeg are bundled inside.
+
+**macOS** (`PsiDJNormalizer-macos.zip`, Apple Silicon):
+
+1. Unzip and drag `PsiDJNormalizer.app` to your Applications folder.
+2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
+   - **Right-click → Open → Open** (needed once only), or
+   - **Self-sign it** — one Terminal command, and it behaves like any normal
+     app from then on:
+     ```bash
+     codesign --force --deep -s - /Applications/PsiDJNormalizer.app && xattr -rd com.apple.quarantine /Applications/PsiDJNormalizer.app
+     ```
+3. Start it by double-clicking, or `open /Applications/PsiDJNormalizer.app`.
+
+**Windows** (`PsiDJNormalizer-windows.zip`):
+
+1. Unzip the whole folder somewhere (keep the files together).
+2. Double-click `PsiDJNormalizer.exe`. If SmartScreen objects, click
+   **More info → Run anyway** (needed once only).
+
+Everything below is for running from source (CLI + auto-watch daemon).
+
+## Requirements (running from source)
+
 - Python 3.7+
 - ffmpeg (for audio processing)
+- Auto-watch daemon mode: **macOS or Linux only** (the installer script uses
+  launchd, so it's macOS; on Linux run `watcher.py` under systemd or similar)
 
 ## Installation
 
@@ -88,7 +115,11 @@ Time elapsed: 5.4m
 
 ### Auto-Watch Mode (Daemon)
 
-Automatically monitors a Dropbox folder and normalizes any new audio files that appear.
+Automatically monitors a folder and normalizes any new audio files that appear.
+Any folder works — local, external drive, or a cloud-synced one like Dropbox
+(handy for dropping in purchases from your phone). **macOS/Linux only** — the
+`install_daemon.sh` installer is macOS (launchd); on Linux run `watcher.py`
+as a service yourself (e.g. systemd).
 
 **Configuration:**
 Edit `config.json` to set your folders:
@@ -110,7 +141,8 @@ bash install_daemon.sh
 The daemon will:
 - Start automatically at login
 - Watch the configured folder continuously
-- Process new files immediately (after 2-second debounce for Dropbox sync)
+- Process new files immediately (after a 2-second debounce so files still
+  arriving via cloud sync are complete)
 - Log all activity to `~/Library/Logs/audio-normalizer.log`
 - Auto-restart if it crashes
 
@@ -133,20 +165,24 @@ cat ~/Library/Logs/audio-normalizer-error.log
 bash uninstall_daemon.sh
 ```
 
-## Shareable App (for non-technical users)
+## Shareable CLI App (for non-technical users)
 
-You can build a self-contained, double-clickable `Normalizer.app` that bundles
-Python and ffmpeg — recipients install nothing. Double-clicking opens Terminal
-with the manual flow (source → destination → AIFF/FLAC). The autowatch daemon is
-not included in the app.
+Besides the GUI app above, you can build a self-contained, double-clickable
+`Normalizer.app` that bundles Python and ffmpeg — recipients install nothing.
+Double-clicking opens Terminal with the manual flow (source → destination →
+format → bitrate, all five formats). The autowatch daemon is not included in
+the app.
 
 ```bash
 packaging/build_app.sh
 ```
 
-Send `packaging/dist/Normalizer.zip`. The app is unsigned, so the first launch on
-another Mac is right-click → **Open** → **Open**. See
-[packaging/BUILD.md](packaging/BUILD.md) for details and the architecture notes.
+Send `packaging/dist/Normalizer.zip` (the final outputs live in
+`packaging/dist/`; anything under `packaging/build/` is an intermediate).
+The app is unsigned, so on first launch the recipient either right-clicks →
+**Open** → **Open**, or self-signs it once (see the Download section above,
+substituting `Normalizer.app`). See [packaging/BUILD.md](packaging/BUILD.md)
+for details and the architecture notes.
 
 ## How It Works
 

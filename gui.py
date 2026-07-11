@@ -3,8 +3,8 @@
 Psi'sDJnormalizerButInAgoodWay
 
 A green-terminal-styled GUI front-end over the normalizer core. Folder pickers
-instead of typed paths, a dark-green tinted background photo, and a steady
-supply of bad DJ jokes while it works.
+instead of typed paths, a dark-green tinted background photo, and one bad DJ
+joke per session, dropped when you least expect it.
 
 The terminal text is drawn directly on the background canvas (transparent — the
 photo shows through). Buttons have a subtly filled, clickable body with hover
@@ -154,6 +154,7 @@ class NormalizerGUI:
         self.bitrate = normalizer.DEFAULT_BITRATE
         self.msg_q: queue.Queue = queue.Queue()
         self.worker = None
+        self.joke_told = False   # one joke per session — not per encode
 
         self.lines = []          # (text, color) buffer for the canvas log
         self.buttons = {}        # name -> dict(rect, text, cmd, label, ...)
@@ -483,6 +484,8 @@ class NormalizerGUI:
                 q.put(("done", (0, 0)))
                 return
             q.put(("log", (f">> found {len(files)} track(s). spinning up...\n", DIM_GREEN)))
+            # One joke per session, after a randomly chosen encode (0 = never).
+            joke_after = 0 if self.joke_told else random.randint(1, len(files))
             ok = fail = 0
             for i, f in enumerate(files, 1):
                 q.put(("log", (f"[{i}/{len(files)}] {f.name}", GREEN)))
@@ -496,7 +499,8 @@ class NormalizerGUI:
                     fail += 1
                     q.put(("log", (f"    XX  FAILED: {f.name}", FAIL_RED)))
                     q.put(("log", (f"        reason: {message}", FAIL_RED)))
-                if i < len(files):
+                if i == joke_after:
+                    self.joke_told = True
                     q.put(("log", (f"    ~ {random.choice(DJ_JOKES)}\n", GREEN)))
             q.put(("done", (ok, fail)))
         except Exception as e:
