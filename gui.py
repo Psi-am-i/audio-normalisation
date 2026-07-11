@@ -19,6 +19,7 @@ import threading
 from pathlib import Path
 
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import filedialog
 
 import normalizer
@@ -48,7 +49,12 @@ else:
 MONO = (MONO_FAMILY, 13)
 MONO_TITLE = (MONO_FAMILY, 21, "bold")
 MONO_STATUS = (MONO_FAMILY, 14, "bold")
-MONO_BTN = (MONO_FAMILY, 12, "bold")
+# Button font is sized at runtime (see _build_ui): Tk's point size renders
+# differently across platforms/Tk versions, so a fixed 12pt can overflow the
+# button bodies on some machines.
+BTN_FONT_MAX, BTN_FONT_MIN = 12, 9
+
+POPUP_ROW_H = 30  # row height of the FORMAT/BITRATE pull-up menus
 
 # Geometry (everything drawn on the canvas)
 FRAME_X0, FRAME_X1 = 40, WIN_W - 40
@@ -120,18 +126,21 @@ ABOUT_LINES = [
     "club-ready loudness across your whole set. LUFS is how loud a",
     "track *actually* sounds to human ears. Originals untouched.",
     "",
-    "---- formats (FORMAT cycles; BITRATE for MP3/AAC) -----------",
+    "---- formats (click FORMAT / BITRATE to pick) ---------------",
     "AIFF  lossless 24-bit, uncompressed. The safe default.",
     "      Plays on ALL Pioneer/CDJ gear. Biggest files.",
     "FLAC  lossless, compressed (much smaller). NEWER GEAR ONLY:",
     "      CDJ-3000 / 2000NXS2 / TOUR1, XDJ-1000MK2 / RX2 / RX3 /",
     "      XZ / AZ, Opus Quad. NOT: CDJ-2000NXS & older, CDJ-900,",
     "      XDJ-700 / 1000 / RX.",
+    "      (Mac Finder won't preview FLAC art — it IS embedded.)",
     "WAV   lossless 16-bit, uncompressed. Plays on ALL gear.",
     "      (24-bit WAV upsets some CDJs; WAV can't hold cover art.)",
-    "MP3   lossy, 320/256/192 kbps, tiny files. Plays on ALL gear.",
-    "AAC   lossy (.m4a), better than MP3 at the same bitrate.",
-    "      All modern gear: CDJ-350/850/900/2000 onward, all XDJs.",
+    "MP3   the granddaddy of lossy formats — good at high bitrates.",
+    "      320/256/192 kbps. Plays on ALL gear.",
+    "AAC   (.m4a) lossy like MP3 but more modern — better at the",
+    "      same size/bitrate. 320/256/192 kbps. All modern gear:",
+    "      CDJ-350/850/900/2000 onward, all XDJs.",
     "",
     "Requires FFmpeg (GPLv3) — bundled inside this app, so you",
     "install nothing. Source: ffmpeg.org.  Made by Picnic Labs / Psi.",
@@ -161,6 +170,7 @@ class NormalizerGUI:
         self._btns_enabled = True
         self._hover_name = None
         self._armed = None       # button pressed but not yet released
+        self._popup = None       # open pull-up menu (FORMAT/BITRATE), or None
 
         self._build_ui()
         self._poll_queue()
@@ -205,14 +215,27 @@ class NormalizerGUI:
         specs = [
             ("source", "[ SOURCE ]", self.pick_source, 1.1),
             ("dest", "[ DESTINATION ]", self.pick_dest, 1.5),
-            ("fmt", "FORMAT: AIFF", self.toggle_format, 1.3),
-            ("rate", "----", self.toggle_bitrate, 0.7),
+            ("fmt", "FORMAT: AIFF", self.open_format_menu, 1.3),
+            ("rate", "----", self.open_bitrate_menu, 0.7),
             ("about", "ABOUT", self.show_about, 0.9),
             ("go", "> NORMALIZE", self.start, 1.5),
         ]
         cy = (BTN_BAR_TOP + BTN_BAR_BOT) // 2
         total_w = FRAME_X1 - FRAME_X0
         unit = total_w / sum(w for *_, w in specs)
+
+        # Shared button font, shrunk until every button's widest possible
+        # label (they grow a " ✓ " when confirmed) fits inside its body.
+        widest = {"source": "[ SOURCE ✓ ]", "dest": "[ DESTINATION ✓ ]",
+                  "fmt": "FORMAT: AIFF", "rate": "320k",
+                  "about": "ABOUT", "go": "> NORMALIZE"}
+        self.btn_font = tkfont.Font(family=MONO_FAMILY, size=BTN_FONT_MAX,
+                                    weight="bold")
+        while self.btn_font.cget("size") > BTN_FONT_MIN and any(
+                self.btn_font.measure(widest[name]) > int(unit * weight) - 22
+                for name, _, _, weight in specs):
+            self.btn_font.configure(size=self.btn_font.cget("size") - 1)
+
         x = FRAME_X0
         for name, label, cmd, weight in specs:
             span = unit * weight
@@ -236,7 +259,7 @@ class NormalizerGUI:
         rect = self.canvas.create_rectangle(
             x0, y0, x1, y1, outline=DIM_GREEN, width=1, fill=BTN_FILL,
         )
-        txt = self.canvas.create_text(cx, cy, text=label, fill=GREEN, font=MONO_BTN)
+        txt = self.canvas.create_text(cx, cy, text=label, fill=GREEN, font=self.btn_font)
         self.buttons[name] = {"rect": rect, "text": txt, "cmd": cmd,
                               "label": label, "bounds": (x0, y0, x1, y1),
                               "confirmed": False, "enabled": True}
@@ -258,6 +281,17 @@ class NormalizerGUI:
         return self._btns_enabled and self.buttons[name]["enabled"]
 
     def _canvas_press(self, event):
+        # An open pull-up menu captures the press: a row applies the pick,
+        # anywhere else just closes it. Either way the press stops here, so a
+        # click on the button under the menu toggles it shut, not shut+open.
+        if self._popup:
+            popup = self._popup
+            row = self._popup_row_at(event.x, event.y)
+            self._close_popup()
+            if row:
+                popup["on_pick"](row["value"])
+            self._armed = None
+            return
         name = self._hit(event.x, event.y)
         if not (name and self._btn_active(name)):
             self._armed = None
@@ -280,6 +314,14 @@ class NormalizerGUI:
             self._reset_btn(armed)  # drag-away cancels
 
     def _canvas_motion(self, event):
+        if self._popup:
+            hot = self._popup_row_at(event.x, event.y)
+            for row in self._popup["rows"]:
+                on = row is hot
+                self.canvas.itemconfigure(row["rect"], fill=BTN_FILL_HOVER if on else BTN_FILL)
+                self.canvas.itemconfigure(row["text"], fill=BRIGHT if on else GREEN)
+            self.canvas.configure(cursor="hand2" if hot else "")
+            return
         name = self._hit(event.x, event.y)
         if name == self._hover_name:
             return
@@ -290,9 +332,50 @@ class NormalizerGUI:
             self._on_hover(name, True)
 
     def _canvas_leave(self, _event):
+        if self._popup:
+            for row in self._popup["rows"]:
+                self.canvas.itemconfigure(row["rect"], fill=BTN_FILL)
+                self.canvas.itemconfigure(row["text"], fill=GREEN)
+            self.canvas.configure(cursor="")
         if self._hover_name:
             self._on_hover(self._hover_name, False)
             self._hover_name = None
+
+    # ---- pull-up menus (FORMAT / BITRATE) --------------------------------
+
+    def _open_popup(self, name, options, current, on_pick):
+        """Extend a button upward into a menu of (value, label) rows."""
+        self._close_popup()
+        x0, y0, x1, _ = self.buttons[name]["bounds"]
+        top = y0 - POPUP_ROW_H * len(options) - 4
+        c = self.canvas
+        c.create_rectangle(x0, top, x1, y0, fill=BTN_FILL, outline=GREEN,
+                           width=2, tags="popup")
+        rows = []
+        for i, (value, label) in enumerate(options):
+            ry0 = top + 2 + i * POPUP_ROW_H
+            ry1 = ry0 + POPUP_ROW_H
+            rect = c.create_rectangle(x0 + 2, ry0, x1 - 2, ry1, fill=BTN_FILL,
+                                      outline="", tags="popup")
+            mark = "> " if value == current else "  "
+            txt = c.create_text(x0 + 10, (ry0 + ry1) // 2, anchor="w",
+                                text=mark + label, fill=GREEN,
+                                font=self.btn_font, tags="popup")
+            rows.append({"x0": x0, "y0": ry0, "x1": x1, "y1": ry1,
+                         "rect": rect, "text": txt, "value": value})
+        self._popup = {"rows": rows, "on_pick": on_pick}
+
+    def _close_popup(self):
+        if self._popup:
+            self._popup = None
+            self.canvas.delete("popup")
+            self.canvas.configure(cursor="")
+
+    def _popup_row_at(self, x, y):
+        for row in self._popup["rows"]:
+            if row["x0"] <= x <= row["x1"] and row["y0"] <= y <= row["y1"]:
+                return row
+        return None
 
     def _on_hover(self, name, entering):
         if not self._btn_active(name):
@@ -404,20 +487,30 @@ class NormalizerGUI:
             self._status("Ready. Hit > NORMALIZE." if self.src_dir
                          else "Destination set. Now choose a SOURCE.")
 
-    def toggle_format(self):
-        fmts = list(normalizer.OUTPUT_FORMATS)
-        self.output_format = fmts[(fmts.index(self.output_format) + 1) % len(fmts)]
+    def open_format_menu(self):
+        self._open_popup(
+            "fmt",
+            [(f, f.upper()) for f in normalizer.OUTPUT_FORMATS],
+            self.output_format, self._pick_format)
+
+    def _pick_format(self, fmt):
+        self.output_format = fmt
         self.canvas.itemconfigure(
-            self.buttons["fmt"]["text"], text=f"FORMAT: {self.output_format.upper()}")
+            self.buttons["fmt"]["text"], text=f"FORMAT: {fmt.upper()}")
         self._update_bitrate_btn()
-        info = normalizer.OUTPUT_FORMATS[self.output_format]
-        self._print(f">> format : {self.output_format.upper()} - {info['summary']}", GREEN)
-        self._print(f">>          {info['gear']}", DIM_GREEN)
+        info = normalizer.OUTPUT_FORMATS[fmt]
+        self._print(f">> format : {fmt.upper()} - {info['summary']}", GREEN)
+        self._print(f">> {info['gear']}", DIM_GREEN)
         self._status(f"Output format: {self._fmt_desc()}")
 
-    def toggle_bitrate(self):
-        rates = list(normalizer.BITRATES)
-        self.bitrate = rates[(rates.index(self.bitrate) + 1) % len(rates)]
+    def open_bitrate_menu(self):
+        self._open_popup(
+            "rate",
+            [(b, f"{b}k") for b in normalizer.BITRATES],
+            self.bitrate, self._pick_bitrate)
+
+    def _pick_bitrate(self, rate):
+        self.bitrate = rate
         self._update_bitrate_btn()
         self._print(f">> bitrate : {self.bitrate} kbps", GREEN)
         self._status(f"Output format: {self._fmt_desc()}")

@@ -147,6 +147,12 @@ def test_format(src: Path, outdir: Path, fmt: str, bitrate: int):
               and (fmt in ('flac',)  # flac pictures aren't flagged attached_pic by all builds
                    or art[0].get('disposition', {}).get('attached_pic') == 1),
               f"video streams: {len(art)}")
+        if fmt == 'flac' and len(art) == 1:
+            # FLAC PICTURE type is carried in the stream comment; default is
+            # "Other", which some players refuse to display as cover art.
+            got = art[0].get('tags', {}).get('comment')
+            check("picture typed Cover (front)", got == 'Cover (front)',
+                  f"got {got!r}")
     else:
         check("no art stream (container limit)", len(art) == 0,
               f"video streams: {len(art)}")

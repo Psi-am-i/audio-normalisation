@@ -230,6 +230,11 @@ CDJ-350, XDJ-700, XDJ-1000 (mk1), XDJ-RX (mk1), XDJ-RR.
 **AAC — supported** on all modern players (CDJ-350/850/900/2000 onward and every
 XDJ). Only ancient CD-only decks (CDJ-800/1000 etc.) can't read it.
 
+**FLAC cover art on macOS:** Finder and Quick Look never display embedded FLAC
+artwork — an Apple limitation (they read FLAC's tags but ignore its PICTURE
+block, so you get the generic music-note icon). The art **is** embedded in the
+file, typed "Cover (front)", and rekordbox, CDJs, VLC etc. display it normally.
+
 **Why 16-bit WAV?** ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE`
 header that some CDJ firmware rejects. 16-bit WAV plays everywhere; if you want
 24-bit lossless, use AIFF (that's why it's the default). Note WAV also cannot

@@ -26,9 +26,11 @@ BITRATES = (320, 256, 192)      # offered choices, kbps
 # Output format registry — single source of truth for every front-end.
 #   ext        output file extension
 #   lossy      True if a bitrate applies
-#   art        cover-art strategy: 'copy' (map + stream-copy), 'attached_pic'
-#              (m4a needs the disposition set), or None (container can't
-#              carry art — WAV)
+#   art        cover-art strategy: 'copy' (map + stream-copy), 'copy_front'
+#              (copy + label the picture "Cover (front)" — FLAC takes its
+#              PICTURE type from the stream comment and defaults to "Other",
+#              which some players won't display), 'attached_pic' (m4a needs
+#              the disposition set), or None (container can't carry art — WAV)
 #   summary    one-line description for menus/log lines
 #   gear       Pioneer support note (verified against pioneerdj.com specs and
 #              the joeselway/Pioneer-DJ-File-Formats matrix, Jul 2026)
@@ -39,7 +41,7 @@ OUTPUT_FORMATS = {
         'gear': 'plays on ALL Pioneer/CDJ gear',
     },
     'flac': {
-        'ext': '.flac', 'lossy': False, 'art': 'copy',
+        'ext': '.flac', 'lossy': False, 'art': 'copy_front',
         'summary': 'compressed lossless (smaller than AIFF/WAV)',
         'gear': ('CDJ-3000/2000NXS2/TOUR1, XDJ-1000MK2/RX2/RX3/XZ/AZ, Opus '
                  'Quad only — NOT CDJ-2000NXS & older, CDJ-900, XDJ-700/1000/RX'),
@@ -52,12 +54,12 @@ OUTPUT_FORMATS = {
     },
     'mp3': {
         'ext': '.mp3', 'lossy': True, 'art': 'copy',
-        'summary': 'lossy, smallest files',
+        'summary': 'the granddaddy of lossy formats — good at high bitrates',
         'gear': 'plays on ALL Pioneer/CDJ gear',
     },
     'aac': {
         'ext': '.m4a', 'lossy': True, 'art': 'attached_pic',
-        'summary': 'lossy, better quality than MP3 at the same bitrate',
+        'summary': 'lossy like MP3 but more modern — better at the same size/bitrate',
         'gear': 'plays on all modern Pioneer/CDJ gear (CDJ-350/850/900/2000 onward, all XDJ)',
     },
 }
@@ -348,6 +350,8 @@ def normalize_audio(
         art_out_args = ['-c:v', 'copy']       # copy cover art without re-encoding
         if art == 'attached_pic':
             art_out_args += ['-disposition:v', 'attached_pic']
+        elif art == 'copy_front':
+            art_out_args += ['-metadata:s:v', 'comment=Cover (front)']
 
     cmd = [
         resolve_ffmpeg(),
