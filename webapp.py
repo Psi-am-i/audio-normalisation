@@ -226,9 +226,60 @@ class Api:
         }
 
     # -- folder pickers ------------------------------------------------------
-    def _pick(self):
+    def _show_folder_dialog(self):
+        """
+        Open the native folder picker and return pywebview's raw result.
+
+        On Windows this MUST run on pywebview's GUI thread. That thread is
+        created STA (webview/platforms/winforms.py — SetApartmentState(STA)),
+        while our js_api methods run on a separate, MTA, thread. The Windows
+        folder picker is the Vista COM IFileDialog, and showing a COM dialog
+        from an MTA thread hangs outright — which is exactly what happened:
+        the app launched fine, then froze the moment a folder was chosen.
+
+        pywebview's Window.create_file_dialog does no marshalling of its own, so
+        we do it here, the same way pywebview does internally for secondary
+        windows: hand the call to the form's Invoke so it executes on the
+        owning GUI thread.
+
+        macOS and Linux have no such requirement and call straight through.
+        """
         import webview
-        picked = self.window.create_file_dialog(webview.FOLDER_DIALOG)
+
+        if sys.platform != "win32":
+            return self.window.create_file_dialog(webview.FOLDER_DIALOG)
+
+        try:
+            from System import Func, Type                          # pythonnet
+            from webview.platforms.winforms import BrowserView
+        except Exception as e:  # noqa: BLE001
+            log.warning("windows: cannot reach the WinForms host (%s); "
+                        "calling the dialog directly", e)
+            return self.window.create_file_dialog(webview.FOLDER_DIALOG)
+
+        form = BrowserView.instances.get(self.window.uid)
+        if form is None:
+            log.warning("windows: no form for uid %s; calling the dialog directly",
+                        self.window.uid)
+            return self.window.create_file_dialog(webview.FOLDER_DIALOG)
+
+        box = {}
+
+        def _on_gui_thread():
+            try:
+                box["result"] = self.window.create_file_dialog(webview.FOLDER_DIALOG)
+            except Exception:  # noqa: BLE001 — must not kill the GUI thread
+                log.exception("windows: folder dialog raised on the GUI thread")
+                box["result"] = None
+            return None
+
+        log.info("windows: showing the folder dialog on the GUI thread")
+        form.Invoke(Func[Type](_on_gui_thread))
+        log.info("windows: folder dialog closed")
+        return box.get("result")
+
+    def _pick(self):
+        picked = self._show_folder_dialog()
         if not picked:
             return None
         return Path(picked[0] if isinstance(picked, (list, tuple)) else picked)
