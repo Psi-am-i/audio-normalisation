@@ -77,33 +77,54 @@ def lossless_by_extension(path) -> Optional[bool]:
 #                'exact'  lossless in -> lossless out, full bit depth kept
 #                '16bit'  still lossless, but bit depth is cut to 16
 #                'lossy'  re-encoded through a lossy codec; not reversible
+#   blurb      the full plain-English description the GUI shows under the format
+#              buttons when one is picked. Lives here rather than in the page so
+#              the interface and the engine cannot drift apart.
 OUTPUT_FORMATS = {
     'aiff': {
         'ext': '.aiff', 'lossy': False, 'art': 'copy', 'preserves': 'exact',
         'summary': 'uncompressed lossless, 24-bit (largest files)',
         'gear': 'plays on ALL Pioneer/CDJ gear',
+        'blurb': ('Lossless, uncompressed 24-bit. Supports album art. Biggest '
+                  'files and plays on all Pioneer/CDJ gear ever made.'),
     },
     'flac': {
         'ext': '.flac', 'lossy': False, 'art': 'copy_front', 'preserves': 'exact',
         'summary': 'compressed lossless (smaller than AIFF/WAV)',
         'gear': ('CDJ-3000/2000NXS2/TOUR1, XDJ-1000MK2/RX2/RX3/XZ/AZ, Opus '
                  'Quad only — NOT CDJ-2000NXS & older, CDJ-900, XDJ-700/1000/RX'),
+        'blurb': ('Lossless, compressed 24-bit (much smaller than WAV or AIFF) '
+                  'with cover art support. Only plays on newer gear: CDJ-3000 / '
+                  '2000NXS2 / TOUR1, XDJ-1000MK2 / RX2 / RX3 / XZ / AZ, Opus '
+                  'Quad. Does NOT play on CDJ-2000NXS & older, CDJ-900, '
+                  'XDJ-700 / 1000 / RX.'),
     },
     'wav': {
         'ext': '.wav', 'lossy': False, 'art': None, 'preserves': '16bit',
         'summary': 'uncompressed lossless, 16-bit (no cover art in WAV)',
         'gear': ('plays on ALL Pioneer/CDJ gear (written 16-bit: 24-bit WAV '
                  'uses a WAVE_EXTENSIBLE header some CDJ firmware rejects)'),
+        'blurb': ('Lossless, large files, but unlike FLAC or AIFF — only '
+                  '16-bit. WAV can support 24 bits, but because ffmpeg writes '
+                  '24-bit WAV with a header some CDJ firmware rejects, WAV is '
+                  'only available here in 16-bit. As such it will play on all '
+                  'Pioneer gear ever made. WAV does not support cover art.'),
     },
     'mp3': {
         'ext': '.mp3', 'lossy': True, 'art': 'copy', 'preserves': 'lossy',
         'summary': 'the granddaddy of lossy formats — good at high bitrates',
         'gear': 'plays on ALL Pioneer/CDJ gear',
+        'blurb': ('Lossy. The granddaddy — good at high bitrates. '
+                  '320 / 256 / 192 kbps. Supports cover art. Plays on all gear.'),
     },
     'aac': {
         'ext': '.m4a', 'lossy': True, 'art': 'attached_pic', 'preserves': 'lossy',
         'summary': 'lossy like MP3 but more modern — better at the same size/bitrate',
         'gear': 'plays on all modern Pioneer/CDJ gear (CDJ-350/850/900/2000 onward, all XDJ)',
+        'blurb': ('Lossy, more modern than MP3 — and much better at the same '
+                  'size. 320 / 256 / 192 kbps. Supports cover art and plays on '
+                  'almost all modern gear: CDJ-350/850/900/2000 onward, '
+                  'all XDJs.'),
     },
 }
 

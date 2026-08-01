@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Very Thoughtful DJ Normalization</title>
+<title>Very Thoughtful Normalisation (but in a good way)</title>
 
 <!-- Archivo + IBM Plex Mono, lifted verbatim from Very Thoughtful Compression so
      the two Picnic Labs audio apps read as one product line. -->
@@ -54,11 +54,15 @@ button:disabled{cursor:default}
    no matter what the user's own background_source.jpg looks like. */
 #bg{position:fixed;inset:0;z-index:0;
   background:url('gui_assets/background.png') center/cover no-repeat;
-  opacity:.5}
+  opacity:.9}
+/* Light touch only. The card carries its own translucent panel and a blur, so
+   the scrim's job is just to sink the corners and keep the brow legible — an
+   earlier pair of stacked near-opaque gradients hid the vinyl grooves
+   completely, which rather defeated having a texture at all. */
 #scrim{position:fixed;inset:0;z-index:1;
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(14,18,23,.55), rgba(14,18,23,.94) 70%),
-    linear-gradient(180deg, rgba(14,18,23,.75), rgba(14,18,23,.97))}
+    radial-gradient(130% 100% at 50% 38%, rgba(14,18,23,0) 30%, rgba(14,18,23,.55) 100%),
+    linear-gradient(180deg, rgba(14,18,23,.35), rgba(14,18,23,.10) 40%, rgba(14,18,23,.55))}
 
 #app{position:relative;z-index:2;height:100%;display:flex;flex-direction:column}
 
@@ -71,6 +75,9 @@ button:disabled{cursor:default}
 .brow-l b{color:var(--bone-2);font-weight:600}
 .wordmark{font-size:12.5px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;
   white-space:nowrap;color:var(--bone)}
+/* the aside stays quieter than the name itself */
+.wordmark-sub{font-weight:400;letter-spacing:.14em;color:var(--bone-3);
+  text-transform:none;font-size:11px}
 .brow-r{display:flex;align-items:center;justify-content:flex-end;gap:9px;
   font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-2);white-space:nowrap}
 .lamp{width:8px;height:8px;border-radius:50%;background:var(--bone-3);flex:0 0 auto}
@@ -81,9 +88,11 @@ button:disabled{cursor:default}
 
 /* ── the one card ─────────────────────────────────────────────────────── */
 .wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:22px;overflow:auto}
-.card{width:100%;max-width:660px;background:rgba(25,32,42,.80);
+/* Slightly more opaque and a stronger blur now the background behind it is a
+   real texture rather than a near-black wash — the panel has to hold its own. */
+.card{width:100%;max-width:660px;background:rgba(25,32,42,.88);
   border:1px solid var(--rule);border-radius:var(--r);
-  box-shadow:0 20px 60px -20px rgba(0,0,0,.75);backdrop-filter:blur(9px);
+  box-shadow:0 24px 70px -18px rgba(0,0,0,.85);backdrop-filter:blur(16px) saturate(1.1);
   padding:6px 24px 22px}
 
 .row{padding:15px 0;border-bottom:1px solid var(--rule)}
@@ -116,7 +125,11 @@ button:disabled{cursor:default}
 .seg:hover:not(.on){border-color:var(--bone-3);color:var(--bone)}
 .seg.on{border-color:var(--accent);color:var(--ground);font-weight:700;
   background:linear-gradient(135deg,var(--accent-a),var(--accent-b))}
-.gear{margin-top:9px;font-size:11.5px;color:var(--bone-3);line-height:1.5}
+/* Full per-format description. Longer than a one-liner now, so it gets a
+   little breathing room and its own subtle plate rather than floating. */
+.gear{margin-top:10px;font-size:11.5px;color:var(--bone-2);line-height:1.6;
+  padding:10px 12px;border-radius:var(--r);background:rgba(14,18,23,.42);
+  border:1px solid var(--rule)}
 
 .rate{margin-top:11px;display:none;align-items:center;gap:9px}
 .rate.show{display:flex}
@@ -276,7 +289,7 @@ button:disabled{cursor:default}
 <div id="app">
   <div class="brow">
     <div class="brow-l mono" id="rig">ffmpeg <b id="ffv">—</b> · EBU R128 <b>−12 LUFS</b></div>
-    <div class="wordmark">Very Thoughtful DJ Normalization</div>
+    <div class="wordmark">Very Thoughtful Normalisation <span class="wordmark-sub">(but in a good way)</span></div>
     <div class="brow-r mono"><span id="state">Ready</span><span class="lamp" id="lamp"></span></div>
   </div>
 
@@ -387,43 +400,56 @@ button:disabled{cursor:default}
       <h2 class="sheet-t">About</h2>
     </div>
     <div class="sheet-b about">
-      <p>Made for DJs. Every file this app writes plays on Pioneer / AlphaTheta
-         gear as listed below, and every track is levelled to one consistent,
+      <p>Make your performance better and easier: equalise the levels on all
+         your tracks and get your library into a format that you know will work
+         on all professional club equipment from Pioneer / AlphaTheta.</p>
+
+      <h3>No loss of quality</h3>
+      <p>If you have lossless files and choose a lossless output format (AIFF,
+         WAV, FLAC), your music will just have a convenient, universal level
+         <b>without being pushed through a lossy encoder</b> to change the gain.
+         If you want lossy formats, you can create MP3 or AAC.</p>
+
+      <h3>Consistent club-ready levels that always play</h3>
+      <p>Every file this app writes plays on Pioneer / AlphaTheta gear as
+         described below, and every track is levelled to one consistent,
          club-ready loudness — <b>−12 LUFS (EBU R128)</b> — so you stop fighting
-         the trim. <b>Your originals are never modified.</b></p>
+         the trim. −12 LUFS is punchy out of the gate and has plenty of headroom
+         to play with.</p>
 
       <h3>Lossless stays lossless</h3>
       <p>A lossless source keeps its <b>own sample rate</b> and <b>full 24-bit
          depth</b>. Nothing is re-compressed. Nothing is resampled unless the
-         source is above 48&nbsp;kHz — 48&nbsp;kHz is the highest rate
-         <i>every</i> Pioneer player accepts, so 88.2 / 96&nbsp;kHz files come
-         down to 48&nbsp;kHz and then play everywhere.</p>
-      <p>Levelling does change the audio — that is the entire job. What it never
-         does is push your audio through a lossy encoder.</p>
+         source is above 48&nbsp;kHz. 48&nbsp;kHz is the highest rate every
+         Pioneer player accepts, so 88.2 / 96&nbsp;kHz files will be pulled down
+         to 48&nbsp;kHz so they play everywhere.</p>
 
       <h3>Formats</h3>
       <table>
-        <tr><td>AIFF</td><td>Lossless, uncompressed 24-bit. The safe default —
-          plays on <b>all</b> Pioneer/CDJ gear. Biggest files.</td></tr>
-        <tr><td>FLAC</td><td>Lossless, compressed 24-bit (much smaller).
-          <b>Newer gear only:</b> CDJ-3000 / 2000NXS2 / TOUR1, XDJ-1000MK2 /
-          RX2 / RX3 / XZ / AZ, Opus Quad. <b>Not</b> CDJ-2000NXS &amp; older,
-          CDJ-900, XDJ-700 / 1000 / RX. (Mac Finder won't preview FLAC art — it
-          <i>is</i> embedded.)</td></tr>
-        <tr><td>WAV</td><td>Lossless but <b>16-bit</b> — the one format that
-          can't keep 24 bits, because ffmpeg writes 24-bit WAV with a header
-          some CDJ firmware rejects. Plays on all gear. Can't carry cover
-          art.</td></tr>
+        <tr><td>AIFF</td><td>Lossless, uncompressed 24-bit. Supports album art.
+          Plays on <b>all</b> Pioneer/CDJ gear ever made. Biggest files.</td></tr>
+        <tr><td>FLAC</td><td>Lossless, compressed 24-bit (much smaller than WAV
+          or AIFF) with cover art. <b>Only plays on newer gear:</b> CDJ-3000 /
+          2000NXS2 / TOUR1, XDJ-1000MK2 / RX2 / RX3 / XZ / AZ, Opus Quad.
+          <b>Does not play</b> on CDJ-2000NXS &amp; older, CDJ-900, XDJ-700 /
+          1000 / RX. Also, the Mac Finder won't preview FLAC artwork — but it
+          is there and will show up on your decks.</td></tr>
+        <tr><td>WAV</td><td>Lossless, large files, but unlike FLAC or AIFF —
+          only 16-bit. WAV can support 24 bits, but because ffmpeg writes 24-bit
+          WAV with a header some CDJ firmware rejects, WAV is only available
+          here in 16-bit. As such it will play on all Pioneer gear ever made.
+          WAV does not support cover art.</td></tr>
         <tr><td>MP3</td><td>Lossy. The granddaddy — good at high bitrates.
-          320 / 256 / 192 kbps. Plays on all gear.</td></tr>
-        <tr><td>AAC</td><td>Lossy, more modern than MP3 — better at the same
-          size. 320 / 256 / 192 kbps. All modern gear: CDJ-350/850/900/2000
-          onward, all XDJs.</td></tr>
+          320 / 256 / 192 kbps. Supports cover art. Plays on all gear.</td></tr>
+        <tr><td>AAC</td><td>Lossy, more modern than MP3 — and much better at the
+          same size. 320 / 256 / 192 kbps. Supports cover art and plays on
+          almost all modern gear: CDJ-350/850/900/2000 onward, all XDJs.</td></tr>
       </table>
 
       <h3>Credits</h3>
       <p>Requires FFmpeg (GPLv3) — bundled inside this app, so you install
-         nothing. Source: ffmpeg.org. Made by Picnic Labs / Psi.</p>
+         nothing. Source: ffmpeg.org.</p>
+      <p>Made by Psi @ Picnic Labs</p>
     </div>
     <div class="sheet-f"><button class="btn" data-shut="#about-sheet">Close</button></div>
   </div>
@@ -441,15 +467,15 @@ const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c =>
    here is what makes the file work standalone in a browser. */
 let FORMATS = {
   aiff:{label:'AIFF', lossy:false, preserves:'exact',
-        gear:'plays on ALL Pioneer/CDJ gear'},
+        blurb:'Lossless, uncompressed 24-bit. Supports album art. Biggest files and plays on all Pioneer/CDJ gear ever made.'},
   flac:{label:'FLAC', lossy:false, preserves:'exact',
-        gear:'CDJ-3000/2000NXS2/TOUR1, XDJ-1000MK2/RX2/RX3/XZ/AZ, Opus Quad only — NOT CDJ-2000NXS & older, CDJ-900, XDJ-700/1000/RX'},
+        blurb:'Lossless, compressed 24-bit (much smaller than WAV or AIFF) with cover art support. Only plays on newer gear: CDJ-3000 / 2000NXS2 / TOUR1, XDJ-1000MK2 / RX2 / RX3 / XZ / AZ, Opus Quad. Does NOT play on CDJ-2000NXS & older, CDJ-900, XDJ-700 / 1000 / RX.'},
   wav: {label:'WAV',  lossy:false, preserves:'16bit',
-        gear:'plays on ALL Pioneer/CDJ gear (written 16-bit)'},
+        blurb:'Lossless, large files, but unlike FLAC or AIFF — only 16-bit. WAV can support 24 bits, but because ffmpeg writes 24-bit WAV with a header some CDJ firmware rejects, WAV is only available here in 16-bit. As such it will play on all Pioneer gear ever made. WAV does not support cover art.'},
   mp3: {label:'MP3',  lossy:true,  preserves:'lossy',
-        gear:'plays on ALL Pioneer/CDJ gear'},
+        blurb:'Lossy. The granddaddy — good at high bitrates. 320 / 256 / 192 kbps. Supports cover art. Plays on all gear.'},
   aac: {label:'AAC',  lossy:true,  preserves:'lossy',
-        gear:'plays on all modern Pioneer/CDJ gear (CDJ-350/850/900/2000 onward, all XDJ)'},
+        blurb:'Lossy, more modern than MP3 — and much better at the same size. 320 / 256 / 192 kbps. Supports cover art and plays on almost all modern gear: CDJ-350/850/900/2000 onward, all XDJs.'},
 };
 let BITRATES = [320,256,192];
 
@@ -468,7 +494,11 @@ function drawSegs(){
     if(S.running) return;
     S.fmt = b.dataset.f; drawSegs(); drawRate(); drawGuarantee();
   });
-  $('#gear').textContent = FORMATS[S.fmt].gear;
+  // The full description for whichever format is selected, shown right under
+  // the buttons — the gear compatibility is the thing most likely to catch
+  // someone out, so it should not be hidden away in About.
+  const f = FORMATS[S.fmt];
+  $('#gear').textContent = f.blurb || f.gear || '';
 }
 function drawRate(){
   const lossy = FORMATS[S.fmt].lossy;

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pywebview desktop shell for Very Thoughtful DJ Normalization.
+pywebview desktop shell for Very Thoughtful Normalisation (but in a good way).
 
     pip install pywebview
     python3 webapp.py [/path/to/vtdn_app.html]
@@ -35,9 +35,9 @@ from pathlib import Path
 
 import normalizer
 
-APP_NAME = "Very Thoughtful DJ Normalization"
+APP_NAME = "Very Thoughtful Normalisation (but in a good way)"
 
-log = logging.getLogger("vtdn.app")
+log = logging.getLogger("vtn.app")
 
 
 # ── logging ──────────────────────────────────────────────────────────────────
@@ -47,14 +47,14 @@ def _log_path() -> Path:
     if sys.platform == "darwin":
         d = Path.home() / "Library" / "Logs"
     elif os.name == "nt":
-        d = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "VTDNormalization"
+        d = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "VTNormalisation"
     else:
-        d = Path.home() / ".local" / "state" / "vtdn"
+        d = Path.home() / ".local" / "state" / "vtnormalisation"
     try:
         d.mkdir(parents=True, exist_ok=True)
     except OSError:
         d = Path(tempfile.gettempdir())
-    return d / "VTDNormalization.log"
+    return d / "VTNormalisation.log"
 
 
 def _setup_logging() -> Path:
@@ -216,6 +216,7 @@ class Api:
                     "lossy": spec["lossy"],
                     "preserves": spec["preserves"],
                     "gear": spec["gear"],
+                    "blurb": spec["blurb"],
                 }
                 for key, spec in normalizer.OUTPUT_FORMATS.items()
             },
@@ -463,7 +464,13 @@ class Api:
 WIN_W, WIN_H = 980, 880
 MIN_W, MIN_H = 720, 640
 MAX_W, MAX_H = 1400, 1260
-LOCK_ASPECT = False          # True pins the window to WIN_W:WIN_H exactly
+
+# Fixed window. The interface is a single centred card of fixed max width with a
+# progress sheet over it — there is nothing here that benefits from being
+# resized, and a fixed window means the layout can never be dragged into a shape
+# nobody checked. Set False to allow resizing between MIN_* and MAX_*.
+FIXED_SIZE = True
+LOCK_ASPECT = False          # only consulted when FIXED_SIZE is False
 
 
 def _constrain_window(window) -> None:
@@ -475,8 +482,8 @@ def _constrain_window(window) -> None:
     because the attribute and its type vary across pywebview versions and
     backends — failing to pin a maximum size must never stop the app opening.
     """
-    if sys.platform != "darwin":
-        return
+    if FIXED_SIZE or sys.platform != "darwin":
+        return                       # resizable=False already fixes size AND ratio
     try:
         native = getattr(window, "native", None)
         if native is None:
@@ -534,7 +541,8 @@ def main(argv: list[str] | None = None) -> int:
     api = Api()
     window = webview.create_window(APP_NAME, str(html), js_api=api,
                                    width=WIN_W, height=WIN_H,
-                                   min_size=(MIN_W, MIN_H),
+                                   min_size=(WIN_W, WIN_H) if FIXED_SIZE else (MIN_W, MIN_H),
+                                   resizable=not FIXED_SIZE,
                                    background_color="#0E1217")
     api.window = window
     window.events.loaded += lambda: (log.info("window loaded"),

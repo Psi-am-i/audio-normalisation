@@ -1,4 +1,4 @@
-# Very Thoughtful DJ Normalization - by Picnic Labs
+# Very Thoughtful Normalisation (but in a good way) - by Picnic Labs
 
 Professional audio normalization system for DJing. Normalizes music files to
 consistent -12 LUFS loudness for club playback on high-quality sound systems.
@@ -16,9 +16,9 @@ Never fiddle with trim again...
 
 ** INSTALLATION **
 
-**macOS** (`VTDNormalization-macos.zip`, Apple Silicon):
+**macOS** (`VTNormalisation-macos.zip`, Apple Silicon):
 
-1. Unzip and drag `Very Thoughtful DJ Normalization.app` to your Applications folder.
+1. Unzip and drag `Very Thoughtful Normalisation (but in a good way).app` to your Applications folder.
 2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
    - **Right-click → Open → Open** It will give an error. Go to System
      Settings → Privacy & Security, scroll down and say allow ("Open Anyway").
@@ -26,14 +26,14 @@ Never fiddle with trim again...
    - **Self-sign it** — Before launch, open Terminal and paste the line below.
      Then it will behave like any normal app from then on:
      ```bash
-     codesign --force --deep -s - '/Applications/Very Thoughtful DJ Normalization.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful DJ Normalization.app'
+     codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation (but in a good way).app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation (but in a good way).app'
      ```
-3. Start it by double-clicking, or `open '/Applications/Very Thoughtful DJ Normalization.app'`.
+3. Start it by double-clicking, or `open '/Applications/Very Thoughtful Normalisation (but in a good way).app'`.
 
-**Windows** (`VTDNormalization-windows.zip`):
+**Windows** (`VTNormalisation-windows.zip`):
 
 1. Unzip the whole folder somewhere (keep the files together).
-2. Double-click `VTDNormalization.exe`. If SmartScreen objects, click
+2. Double-click `VTNormalisation.exe`. If SmartScreen objects, click
    **More info → Run anyway** (needed once only).
 
 ## In the window

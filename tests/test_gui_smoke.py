@@ -111,10 +111,11 @@ def main():
           str(list(f["formats"])))
     for key, spec in normalizer.OUTPUT_FORMATS.items():
         got = f["formats"][key]
-        check(f"{key}: lossy/preserves/gear carried over",
+        check(f"{key}: lossy/preserves/gear/blurb carried over",
               got["lossy"] == spec["lossy"]
               and got["preserves"] == spec["preserves"]
-              and got["gear"] == spec["gear"])
+              and got["gear"] == spec["gear"]
+              and got["blurb"] == spec["blurb"])
     check("bitrates match", f["bitrates"] == list(normalizer.BITRATES))
     check("default bitrate matches", f["default_bitrate"] == normalizer.DEFAULT_BITRATE)
     # The HTML's standalone literal must carry the same keys, or a browser run

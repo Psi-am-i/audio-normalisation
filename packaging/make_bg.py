@@ -36,12 +36,16 @@ DST = ROOT / "gui_assets" / "background.png"
 # Tuned so the image reads as TEXTURE behind the panels, not as a picture: an
 # earlier pass at brightness .82 left the photo bright enough to fight the
 # foreground once real panels sat on top of it.
-RAMP_BLACK = (6, 8, 11)
-RAMP_MID = (24, 31, 40)
-RAMP_WHITE = (78, 94, 114)
-RAMP_MIDPOINT = 130
-BRIGHTNESS = 0.60
-CONTRAST = 1.12
+# Tuned for the vinyl-groove macro. A near-uniform texture like this can sit far
+# brighter than a photograph of a subject: there is nothing in it for the eye to
+# lock onto, so it never competes with the panels. Values that suited the earlier
+# portrait (brightness .60) crushed the grooves into flat black.
+RAMP_BLACK = (10, 13, 18)
+RAMP_MID = (38, 48, 62)
+RAMP_WHITE = (116, 136, 162)
+RAMP_MIDPOINT = 128
+BRIGHTNESS = 1.05
+CONTRAST = 1.22
 
 
 def procedural_background() -> Image.Image:

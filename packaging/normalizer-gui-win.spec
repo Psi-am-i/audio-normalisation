@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec — Windows build of "Very Thoughtful DJ Normalization" (the GUI).
+PyInstaller spec — Windows build of "Very Thoughtful Normalisation (but in a good way)" (the GUI).
 
 Windows counterpart of normalizer-gui.spec: a windowed onedir build bundling the
 Python runtime + pywebview (EdgeChromium / WebView2 backend), the engine
@@ -63,7 +63,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='VTDNormalization',
+    name='VTNormalisation',
     debug=False,
     strip=False,
     upx=False,
@@ -78,5 +78,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name='VTDNormalization',
+    name='VTNormalisation',
 )

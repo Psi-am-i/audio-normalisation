@@ -2,8 +2,8 @@ name: Release builds
 
 # Builds the distributable apps. PyInstaller cannot cross-compile, so each OS
 # bundle is produced on a runner of that OS:
-#   - windows-latest -> VTDNormalization-windows.zip (.exe onedir + ffmpeg.exe)
-#   - macos-latest   -> VTDNormalization-macos.zip   (.app, Apple Silicon)
+#   - windows-latest -> VTNormalisation-windows.zip (.exe onedir + ffmpeg.exe)
+#   - macos-latest   -> VTNormalisation-macos.zip   (.app, Apple Silicon)
 # On a v* tag the zips are attached to a GitHub release. Also runnable by hand
 # from the Actions tab (workflow_dispatch) to get artifacts without a release.
 
@@ -61,33 +61,44 @@ jobs:
         run: |
           source packaging/lib_licenses.sh
           FFVER="$(./ffmpeg.exe -version | head -1)"
-          write_ffmpeg_licenses "dist-win/VTDNormalization/licenses" "$FFVER"
+          write_ffmpeg_licenses "dist-win/VTNormalisation/licenses" "$FFVER"
           # Canonical recipient README, shared with the macOS build
-          cp packaging/APP_README.txt dist-win/VTDNormalization/README.txt
-          cd dist-win && 7z a ../VTDNormalization-windows.zip VTDNormalization
+          cp packaging/APP_README.txt dist-win/VTNormalisation/README.txt
+          cd dist-win && 7z a ../VTNormalisation-windows.zip VTNormalisation
       - uses: actions/upload-artifact@v4
         with:
-          name: VTDNormalization-windows
-          path: VTDNormalization-windows.zip
+          name: VTNormalisation-windows
+          path: VTNormalisation-windows.zip
 
   macos:
     needs: test
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      # A universal2 interpreter is what lets the build produce a universal app
+      # (Apple Silicon + Intel). setup-python's macOS builds are universal2;
+      # build_gui_app.sh checks and falls back to a native build with a warning
+      # if it ever isn't, rather than mislabelling the result.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Report interpreter architecture
+        run: lipo -archs "$(python3 -c 'import sys; print(sys.executable)')" || true
       - name: Generate background (repo has no personal photo)
         run: |
           python3 -m venv bgvenv
           bgvenv/bin/pip install --quiet pillow
           bgvenv/bin/python packaging/make_bg.py
       - name: Build .app
+        env:
+          PYTHON: python3
         run: packaging/build_gui_app.sh
       - name: Rename zip
-        run: mv packaging/dist-gui/VTDNormalization.zip VTDNormalization-macos.zip
+        run: mv packaging/dist-gui/VTNormalisation.zip VTNormalisation-macos.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: VTDNormalization-macos
-          path: VTDNormalization-macos.zip
+          name: VTNormalisation-macos
+          path: VTNormalisation-macos.zip
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -103,6 +114,6 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --generate-notes \
-            VTDNormalization-windows.zip VTDNormalization-macos.zip \
+            VTNormalisation-windows.zip VTNormalisation-macos.zip \
           || gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --clobber VTDNormalization-windows.zip VTDNormalization-macos.zip
+            --clobber VTNormalisation-windows.zip VTNormalisation-macos.zip
