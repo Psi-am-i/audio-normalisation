@@ -1,2 +1,8 @@
+# Autowatch daemon (watcher.py)
 watchdog>=3.0.0
+# Manual CLI progress bars (normalize.py)
 tqdm>=4.65.0
+# Desktop GUI shell (webapp.py). Pulls the platform webview backend: pyobjc on
+# macOS, EdgeChromium/WebView2 on Windows, GTK/Qt on Linux. Not needed for the
+# CLI or the daemon.
+pywebview>=5.0

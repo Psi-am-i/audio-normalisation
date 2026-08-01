@@ -1,15 +1,28 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec for the GUI app "Psi'sDJnormalizerButInAgoodWay".
+PyInstaller spec — macOS build of "Very Thoughtful DJ Normalization" (the GUI).
 
-Produces a proper windowed macOS .app (no Terminal) bundling:
-  - the Python runtime + tkinter
-  - the core engine (normalizer.py) and GUI front-end (gui.py)
-  - the pre-tinted background (gui_assets/background.png)
+Produces a windowed macOS .app (WKWebView via pywebview) bundling:
+  - the Python runtime + pywebview (+ the pyobjc cocoa backend)
+  - the engine (normalizer.py) and the shell (webapp.py)
+  - the interface: vtdn_app.html, loaded from the bundle root at runtime
+  - the indigo-tinted background (gui_assets/background.png)
   - a static ffmpeg binary (resolved at runtime by normalizer.resolve_ffmpeg())
 
-The ffmpeg binary to embed is passed via FFMPEG_BINARY_PATH (build_gui_app.sh
-sets it). PIL/Pillow is only used at build time (make_bg.py) and is excluded.
+Only ffmpeg is bundled — NOT ffprobe. The engine deliberately reads stream
+properties out of ffmpeg's own stderr (normalizer._parse_input_stream) so the
+app never depends on a second binary. Don't "helpfully" add ffprobe here; the
+code path that would use it does not exist.
+
+vtdn_app.html and gui_assets/ land side by side at the bundle root, because the
+page pulls the background as a RELATIVE sibling (url('gui_assets/background.png')).
+Move one without the other and the app loads with a black window.
+
+PIL/Pillow is build-time only (make_bg.py) and is excluded. tkinter is excluded
+outright — the old tkinter front-end is gone.
+
+PyInstaller cannot cross-compile; the Windows build uses normalizer-gui-win.spec
+on a Windows runner.
 """
 
 import os
@@ -22,6 +35,10 @@ if not ffmpeg_binary or not os.path.exists(ffmpeg_binary):
         "Run packaging/build_gui_app.sh, which sets it for you."
     )
 
+html = os.path.join(repo_root, 'vtdn_app.html')
+if not os.path.exists(html):
+    raise SystemExit("vtdn_app.html missing from the repo.")
+
 bg_png = os.path.join(repo_root, 'gui_assets', 'background.png')
 if not os.path.exists(bg_png):
     raise SystemExit(
@@ -29,14 +46,14 @@ if not os.path.exists(bg_png):
     )
 
 a = Analysis(
-    [os.path.join(repo_root, 'gui.py')],
+    [os.path.join(repo_root, 'webapp.py')],
     pathex=[repo_root],
     binaries=[(ffmpeg_binary, '.')],
-    datas=[(bg_png, 'gui_assets')],
-    hiddenimports=['normalizer'],
+    datas=[(html, '.'), (bg_png, 'gui_assets')],
+    hiddenimports=['webview', 'webview.platforms.cocoa', 'normalizer'],
     hookspath=[],
     runtime_hooks=[],
-    excludes=['watchdog', 'tqdm', 'PIL', 'numpy'],
+    excludes=['tkinter', 'watchdog', 'tqdm', 'PIL', 'numpy', 'pytest'],
     noarchive=False,
 )
 
@@ -47,7 +64,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='PsiDJNormalizer',
+    name='VTDNormalization',
     debug=False,
     strip=False,
     upx=False,
@@ -61,19 +78,19 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name='PsiDJNormalizer',
+    name='VTDNormalization',
 )
 
 app = BUNDLE(
     coll,
-    name='PsiDJNormalizer.app',
-    icon=None,
-    bundle_identifier='com.picniclabs.psidjnormalizer',
+    name='Very Thoughtful DJ Normalization.app',
+    icon=os.path.join(repo_root, 'packaging', 'app_icon.icns'),
+    bundle_identifier='com.picniclabs.vtdnormalization',
     info_plist={
-        'CFBundleName': 'PsiDJNormalizer',
-        'CFBundleDisplayName': "Psi'sDJnormalizerButInAgoodWay",
-        'CFBundleShortVersionString': '1.1',
+        'CFBundleName': 'VTDNormalization',
+        'CFBundleDisplayName': 'Very Thoughtful DJ Normalization',
+        'CFBundleShortVersionString': '2.0',
         'NSHighResolutionCapable': True,
-        'LSMinimumSystemVersion': '10.13',
+        'LSMinimumSystemVersion': '10.14',   # WKWebView via pywebview
     },
 )

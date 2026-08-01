@@ -7,7 +7,7 @@ normalizes it to every output format (and every bitrate for the lossy ones),
 then verifies with ffprobe:
 
   - container/codec/extension are correct
-  - sample rate is pinned to 44.1 kHz
+  - sample rate follows the source (kept up to 48 kHz, resampled above)
   - bit depth (16-bit WAV, 24-bit AIFF)
   - lossy bitrate lands near the requested figure
   - title/artist metadata survives
@@ -89,7 +89,7 @@ def measure_lufs(path: str) -> float:
 EXPECT = {
     #        codec         bits  art
     'aiff': ('pcm_s24be',  24,   True),
-    'flac': ('flac',       None, True),
+    'flac': ('flac',       24,   True),   # pinned to 24-bit, like AIFF
     'wav':  ('pcm_s16le',  16,   False),
     'mp3':  ('mp3',        None, True),
     'aac':  ('aac',        None, True),
@@ -117,7 +117,12 @@ def test_format(src: Path, outdir: Path, fmt: str, bitrate: int):
 
     check("codec", audio['codec_name'] == expected_codec,
           f"got {audio['codec_name']}")
-    check("sample rate 44100", audio.get('sample_rate') == '44100',
+    # The source's own rate is kept unless it exceeds what every Pioneer player
+    # can read, so the expectation is derived from the source, not hardcoded.
+    src_rate = normalizer.probe_source(str(src))['sample_rate']
+    want_rate = normalizer.target_sample_rate(src_rate)
+    check(f"sample rate {want_rate} (source {src_rate})",
+          audio.get('sample_rate') == str(want_rate),
           f"got {audio.get('sample_rate')}")
     if expected_bits:
         got = int(audio.get('bits_per_raw_sample')
@@ -162,6 +167,66 @@ def test_format(src: Path, outdir: Path, fmt: str, bitrate: int):
     print()
 
 
+def make_source_at(workdir: Path, rate: int, bits: int) -> Path:
+    """A lossless FLAC source at a given sample rate / bit depth."""
+    out = workdir / f"src_{rate}_{bits}.flac"
+    r = run([FFMPEG, '-hide_banner', '-loglevel', 'error',
+             '-f', 'lavfi', '-i', f'anoisesrc=d=3:c=pink:r={rate}:a=0.4',
+             '-af', 'aformat=channel_layouts=stereo',
+             '-c:a', 'flac', '-sample_fmt', 's32' if bits == 24 else 's16',
+             str(out)])
+    assert r.returncode == 0, r.stderr
+    return out
+
+
+def test_rate_policy(workdir: Path, outdir: Path):
+    """
+    Sample-rate policy: the source's own rate is preserved up to the highest
+    rate every Pioneer player can read; only above that is it resampled.
+
+    This is the regression guard for the bug where '-ar 44100' was pinned
+    unconditionally and silently downsampled every 48 kHz master.
+    """
+    print("[sample-rate policy]")
+    cases = [
+        # source rate, bits, expected output rate
+        (44100, 16, 44100),   # untouched
+        (48000, 24, 48000),   # untouched — used to be downsampled to 44100
+        (96000, 24, 48000),   # above gear limit, resampled down
+    ]
+    for rate, bits, want in cases:
+        src = make_source_at(workdir, rate, bits)
+
+        info = normalizer.probe_source(str(src))
+        check(f"probe reads {rate} Hz / {bits}-bit",
+              info['sample_rate'] == rate and info['bits'] == bits
+              and info['lossless'] is True, str(info))
+
+        out = normalizer.get_output_filename(str(src), str(outdir), 'aiff')
+        ok, msg = normalizer.normalize_audio(str(src), out, output_format='aiff')
+        check(f"{rate} Hz normalizes", ok, msg)
+        if not ok:
+            continue
+
+        audio = [s for s in probe(out)['streams']
+                 if s['codec_type'] == 'audio'][0]
+        check(f"{rate} Hz -> {want} Hz", audio.get('sample_rate') == str(want),
+              f"got {audio.get('sample_rate')}")
+        # Losslessness means the depth survives too, not just the rate.
+        got_bits = int(audio.get('bits_per_raw_sample')
+                       or audio.get('bits_per_sample') or 0)
+        check(f"{rate} Hz keeps 24-bit depth", got_bits == 24, f"got {got_bits}")
+
+    # A lossy source must never be reported as lossless.
+    mp3 = workdir / "lossy.mp3"
+    run([FFMPEG, '-hide_banner', '-loglevel', 'error', '-f', 'lavfi',
+         '-i', 'anoisesrc=d=2:c=pink:r=44100:a=0.4', '-ac', '2',
+         '-c:a', 'libmp3lame', '-b:a', '320k', str(mp3)])
+    check("mp3 source reported lossy",
+          normalizer.probe_source(str(mp3))['lossless'] is False)
+    print()
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="annorm_test_") as tmp:
         workdir = Path(tmp)
@@ -177,6 +242,8 @@ def main():
                     test_format(src, outdir, fmt, bitrate)
             else:
                 test_format(src, outdir, fmt, normalizer.DEFAULT_BITRATE)
+
+        test_rate_policy(workdir, outdir)
 
         # Guard rails
         print("[guards]")

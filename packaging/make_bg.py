@@ -1,62 +1,87 @@
 #!/usr/bin/env python3
 """
-Build-time helper: pre-tint the GUI background image to very dark green and
-size it to the window, so the app can load it with stdlib tk.PhotoImage and
-needs no Pillow at runtime.
+Build-time helper: pre-tint the GUI background image to cool grey/blue and size it
+for the window, so the app ships a ready-to-use image and needs no Pillow at
+runtime.
 
     python3 packaging/make_bg.py
 
 Reads  gui_assets/background_source.jpg  (personal photo, not in the repo)
-Writes gui_assets/background.png  (WIN_W x WIN_H, dark-green tinted)
+Writes gui_assets/background.png  (BG_W x BG_H, grey/blue tinted)
 
 If the source photo is missing (e.g. CI builds of this public repo), a
-procedural dark-green gradient is generated instead so the build still works.
+procedural grey/blue gradient is generated instead so the build still works.
+
+The grey/blue ramp matches the app palette (ground #0E1217, panel #19202A,
+accent #5AA9F0). The intended source is a vinyl-groove macro — the grooves give
+directional texture that sits well behind the panels.
 """
 import math
 from pathlib import Path
 from PIL import Image, ImageOps, ImageEnhance
 
-WIN_W, WIN_H = 900, 680
+# Generated larger than the window: the page uses background-size:cover, so the
+# photo has to survive the window being resized up without going soft.
+BG_W, BG_H = 1400, 1000
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "gui_assets" / "background_source.jpg"
 DST = ROOT / "gui_assets" / "background.png"
 
+# Luminance -> cool grey/blue ramp, matching the palette (ground #0E1217, panel
+# #19202A, accent #5AA9F0). Shadows fall to near-black, highlights lift to a
+# steely blue-grey — deliberately NOT to the accent blue itself, or the
+# background starts competing with the one element meant to be blue.
+#
+# Tuned so the image reads as TEXTURE behind the panels, not as a picture: an
+# earlier pass at brightness .82 left the photo bright enough to fight the
+# foreground once real panels sat on top of it.
+RAMP_BLACK = (6, 8, 11)
+RAMP_MID = (24, 31, 40)
+RAMP_WHITE = (78, 94, 114)
+RAMP_MIDPOINT = 130
+BRIGHTNESS = 0.60
+CONTRAST = 1.12
+
 
 def procedural_background() -> Image.Image:
-    """Dark-green vertical gradient with a soft vignette — photo stand-in."""
-    img = Image.new("RGB", (WIN_W, WIN_H))
+    """Cool grey/blue vertical gradient with a soft vignette — image stand-in."""
+    img = Image.new("RGB", (BG_W, BG_H))
     px = img.load()
-    cx, cy = WIN_W / 2, WIN_H / 2
+    cx, cy = BG_W / 2, BG_H / 2
     max_d = math.hypot(cx, cy)
-    for y in range(WIN_H):
-        base = 10 + 20 * (1 - y / WIN_H)          # brighter at the top
-        for x in range(WIN_W):
+    for y in range(BG_H):
+        base = 12 + 26 * (1 - y / BG_H)           # brighter at the top
+        for x in range(BG_W):
             vig = 1 - 0.55 * (math.hypot(x - cx, y - cy) / max_d) ** 2
-            g = base * vig
-            px[x, y] = (int(g * 0.25), int(g), int(g * 0.3))
+            v = base * vig
+            px[x, y] = (int(v * 0.72), int(v * 0.88), int(v * 1.20))
     return img
 
 
-if SRC.exists():
-    img = ImageOps.exif_transpose(Image.open(SRC)).convert("RGB")
-    img = img.rotate(-90, expand=True)                              # 90 deg right
-    img = ImageOps.fit(img, (WIN_W, WIN_H), method=Image.LANCZOS)   # cover-crop
-else:
-    print(f"note: {SRC.name} not found — generating procedural background")
-    img = procedural_background()
+def main() -> None:
+    if SRC.exists():
+        img = ImageOps.exif_transpose(Image.open(SRC)).convert("RGB")
+        # Only rotate a PORTRAIT source. The rotation used to be unconditional,
+        # which suited the original upright photo but would tip a landscape
+        # source (such as the vinyl-groove macro) onto its side.
+        if img.height > img.width:
+            img = img.rotate(-90, expand=True)
+        img = ImageOps.fit(img, (BG_W, BG_H), method=Image.LANCZOS)   # cover-crop
+    else:
+        print(f"note: {SRC.name} not found — generating procedural background")
+        img = procedural_background()
 
-# Luminance -> dark green ramp (shadows near-black green, highlights dim green).
-gray = ImageOps.grayscale(img)
-tinted = ImageOps.colorize(
-    gray,
-    black=(0, 4, 0),
-    mid=(8, 30, 10),
-    white=(26, 74, 30),
-    midpoint=120,
-)
-tinted = ImageEnhance.Brightness(tinted).enhance(0.70)
-tinted = ImageEnhance.Contrast(tinted).enhance(1.05)
-DST.parent.mkdir(parents=True, exist_ok=True)  # gui_assets/ is fully gitignored
-tinted.save(DST)
-print(f"wrote {DST} ({WIN_W}x{WIN_H})")
+    gray = ImageOps.grayscale(img)
+    tinted = ImageOps.colorize(gray, black=RAMP_BLACK, mid=RAMP_MID,
+                               white=RAMP_WHITE, midpoint=RAMP_MIDPOINT)
+    tinted = ImageEnhance.Brightness(tinted).enhance(BRIGHTNESS)
+    tinted = ImageEnhance.Contrast(tinted).enhance(CONTRAST)
+
+    DST.parent.mkdir(parents=True, exist_ok=True)  # gui_assets/ is fully gitignored
+    tinted.save(DST)
+    print(f"wrote {DST} ({BG_W}x{BG_H}, grey/blue)")
+
+
+if __name__ == "__main__":
+    main()

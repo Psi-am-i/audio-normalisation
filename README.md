@@ -1,4 +1,4 @@
-# Psi's DJ Normalization (in a good way!) - by Picnic Labs
+# Very Thoughtful DJ Normalization - by Picnic Labs
 
 Professional audio normalization system for DJing. Normalizes music files to consistent -12 LUFS loudness for club playback on high-quality sound systems. Never fiddle with trim again...
 
@@ -8,6 +8,9 @@ Professional audio normalization system for DJing. Normalizes music files to con
 - **Five Output Formats:** Lossless AIFF (default), FLAC, WAV — or lossy MP3/AAC at 320/256/192 kbps
 - **Two Modes:** Manual batch processing or automatic folder watching
 - **Preserves Originals:** Never modifies source files
+- **Lossless stays lossless:** A lossless source keeps its own sample rate and
+  full 24-bit depth — nothing is re-compressed and nothing is resampled unless
+  the source is above 48 kHz (see [Sample rate](#sample-rate))
 - **Club-Optimized:** No compression on lossless files, just loudness normalization
 - Know exactly what Pioneer/AlphaTheta gear your files will work on
 - **Format Support:** M4A, WAV, FLAC, MP3, AIFF, OGG
@@ -18,21 +21,21 @@ Grab the GUI app for your platform from the
 [releases page](https://github.com/Psi-am-i/audio-normalisation/releases/latest).
 Python and ffmpeg are bundled inside.
 
-**macOS** (`PsiDJNormalizer-macos.zip`, Apple Silicon):
+**macOS** (`VTDNormalization-macos.zip`, Apple Silicon):
 
-1. Unzip and drag `PsiDJNormalizer.app` to your Applications folder.
+1. Unzip and drag `Very Thoughtful DJ Normalization.app` to your Applications folder.
 2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
    - **Right-click → Open → Open** It will give an error. Go to System & Security, scroll down and say allow. Then open again (only need to doo this once), or
    - **Self-sign it** — Before launch, open Terminal and paste the line below. Then it will behave like any normal app from then on:
      ```bash
-     codesign --force --deep -s - /Applications/PsiDJNormalizer.app && xattr -rd com.apple.quarantine /Applications/PsiDJNormalizer.app
+     codesign --force --deep -s - '/Applications/Very Thoughtful DJ Normalization.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful DJ Normalization.app'
      ```
-3. Start it by double-clicking, or `open /Applications/PsiDJNormalizer.app`.
+3. Start it by double-clicking, or `open '/Applications/Very Thoughtful DJ Normalization.app'`.
 
-**Windows** (`PsiDJNormalizer-windows.zip`):
+**Windows** (`VTDNormalization-windows.zip`):
 
 1. Unzip the whole folder somewhere (keep the files together).
-2. Double-click `PsiDJNormalizer.exe`. If SmartScreen objects, click
+2. Double-click `VTDNormalization.exe`. If SmartScreen objects, click
    **More info → Run anyway** (needed once only).
 
 Everything below is for running from source (CLI + auto-watch daemon).
@@ -211,14 +214,28 @@ The tool uses ffmpeg's `loudnorm` filter with a two-pass process for accurate lo
 ### Output Formats & Pioneer Gear Compatibility
 
 Five output formats are available in every mode (CLI menu, GUI FORMAT/BITRATE
-buttons, `output_format` + `bitrate` in `config.json`). All output is pinned to
-44.1 kHz — CDJs/rekordbox reject anything above 48 kHz.
+buttons, `output_format` + `bitrate` in `config.json`).
+
+### Sample rate
+
+Output keeps the **source's own sample rate**, up to 48 kHz. A 44.1 kHz track
+stays 44.1 kHz; a 48 kHz master stays 48 kHz. Only sources above 48 kHz
+(88.2 / 96 kHz) are resampled, and then down to 48 kHz rather than 44.1.
+
+48 kHz is the ceiling because it is the highest rate *every* Pioneer/AlphaTheta
+player accepts. Verified per model (Aug 2026): CDJ-350, CDJ-850, CDJ-900,
+CDJ-2000, CDJ-2000NXS, XDJ-700, XDJ-1000/MK2 and XDJ-XZ all top out at 48 kHz
+for WAV/AIFF. Only CDJ-3000, CDJ-2000NXS2 and Opus Quad read 88.2/96 kHz — so
+capping at 48 kHz means every file this tool writes plays on all of them.
+
+> Earlier versions pinned **all** output to 44.1 kHz, which silently
+> downsampled every 48 kHz master for no compatibility benefit.
 
 | Format | Type | Bitrate | Pioneer support |
 |--------|------|---------|-----------------|
 | **AIFF** (default) | Lossless, uncompressed 24-bit | — | **ALL** CDJ/XDJ gear |
 | **WAV** | Lossless, uncompressed 16-bit | — | **ALL** CDJ/XDJ gear |
-| **FLAC** | Lossless, compressed (much smaller) | — | **Newer gear only** — see below |
+| **FLAC** | Lossless, compressed 24-bit (much smaller) | — | **Newer gear only** — see below |
 | **MP3** | Lossy (libmp3lame, ID3v2.3) | 320/256/192 kbps | **ALL** CDJ/XDJ gear |
 | **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | All **modern** gear — see below |
 
@@ -236,9 +253,14 @@ block, so you get the generic music-note icon). The art **is** embedded in the
 file, typed "Cover (front)", and rekordbox, CDJs, VLC etc. display it normally.
 
 **Why 16-bit WAV?** ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE`
-header that some CDJ firmware rejects. 16-bit WAV plays everywhere; if you want
-24-bit lossless, use AIFF (that's why it's the default). Note WAV also cannot
-carry embedded cover art — use AIFF/FLAC to keep artwork.
+header (`wFormatTag` `0xFFFE`) that some CDJ firmware rejects, and offers no way
+to suppress it. 16-bit WAV plays everywhere; if you want 24-bit lossless, use
+AIFF (that's why it's the default). Note WAV also cannot carry embedded cover
+art — use AIFF/FLAC to keep artwork.
+
+WAV is therefore the **one** output format that cannot fully preserve a lossless
+source: the sample rate is kept, but bit depth drops to 16. AIFF and FLAC both
+keep the full 24 bits.
 
 **AAC encoder note:** on macOS the bundled/detected ffmpeg uses Apple's
 AudioToolbox encoder (`aac_at`), which genuinely hits 320 kbps. ffmpeg's

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Build the self-contained GUI app "Psi'sDJnormalizerButInAgoodWay".
+# Build the self-contained GUI app "Very Thoughtful DJ Normalization".
 #
-# Output: packaging/dist-gui/PsiDJNormalizer.zip  (send this)
+# Output: packaging/dist-gui/VTDNormalization.zip  (send this)
 #
-# A proper windowed macOS .app — double-click opens the green-terminal GUI with
-# folder pickers. Python, tkinter, the tinted background, and ffmpeg are all
-# bundled; recipients install nothing.
+# A proper windowed macOS .app — double-click opens the interface (pywebview /
+# WKWebView) with native folder pickers. Python, pywebview, the interface HTML,
+# the tinted background and ffmpeg are all bundled; recipients install nothing.
 #
 # ffmpeg source (redistributable GPLv3 static build; --enable-nonfree refused):
 #   1. $FFMPEG_STATIC  — a static ffmpeg you already have
@@ -22,8 +22,8 @@ source "$PKG_DIR/lib_licenses.sh"
 BUILD_DIR="$PKG_DIR/build-gui"
 DIST_DIR="$PKG_DIR/dist-gui"
 VENV_DIR="$BUILD_DIR/venv"
-APP_NAME="PsiDJNormalizer"
-APP_DIR="$DIST_DIR/$APP_NAME.app"
+APP_NAME="VTDNormalization"
+APP_DIR="$DIST_DIR/Very Thoughtful DJ Normalization.app"
 
 echo "==> Cleaning previous build"
 rm -rf "$BUILD_DIR" "$DIST_DIR"
@@ -58,37 +58,29 @@ fi
 FFVER="$("$FFMPEG_BIN" -version 2>/dev/null | head -1)"
 echo "    $FFVER"
 
-echo "==> Selecting a Python with a click-safe Tk (>= 8.6.13)"
-# Tk 8.6.12 and older have broken mouse-event handling on modern macOS —
-# clicks don't register until the window is moved (cpython #110218). The old
-# app was built on Tk 8.6.12, which was exactly the "click twice" bug. Gate
-# hard so a bad interpreter can never produce a broken build again.
-tk_ok() {
-    "$1" - <<'PYEOF' 2>/dev/null
-import sys, tkinter
-r = tkinter.Tk()
-level = tuple(int(x) for x in r.tk.call('info', 'patchlevel').split('.'))
-r.destroy()
-sys.exit(0 if level >= (8, 6, 13) else 1)
-PYEOF
+echo "==> Selecting a build Python (>= 3.9)"
+# The old tkinter Tk-version gate is gone with the tkinter front-end: the
+# interface is now HTML in a WKWebView, so Tk is irrelevant and tkinter is
+# excluded from the bundle entirely.
+py_ok() {
+    "$1" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null
 }
 
 BUILD_PYTHON=""
-for cand in "${PYTHON:-}" python3.14 python3.13 python3.12 python3; do
+for cand in "${PYTHON:-}" python3.13 python3.12 python3.11 python3; do
     [[ -n "$cand" ]] || continue
     command -v "$cand" >/dev/null || continue
-    if tk_ok "$(command -v "$cand")"; then
+    if py_ok "$(command -v "$cand")"; then
         BUILD_PYTHON="$(command -v "$cand")"
         break
     fi
 done
 if [[ -z "$BUILD_PYTHON" ]]; then
-    echo "ERROR: no Python found with tkinter + Tk >= 8.6.13."
-    echo "  Fix: brew install python-tk@3.14   (or a python.org 3.12+ installer)"
-    echo "  Or set PYTHON=/path/to/python before running this script."
+    echo "ERROR: no Python >= 3.9 found."
+    echo "  Set PYTHON=/path/to/python before running this script."
     exit 1
 fi
-echo "    Using $BUILD_PYTHON ($("$BUILD_PYTHON" -c 'import tkinter; r=tkinter.Tk(); print("Tk", r.tk.call("info","patchlevel")); r.destroy()'))"
+echo "    Using $BUILD_PYTHON ($("$BUILD_PYTHON" --version))"
 
 # Encoder gate: MP3 and AAC output need these in the bundled ffmpeg.
 for enc in libmp3lame aac; do
@@ -103,7 +95,8 @@ echo "==> Creating build virtualenv"
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
 pip install --quiet --upgrade pip
-pip install --quiet pyinstaller
+# pywebview pulls the pyobjc WKWebView backend on macOS
+pip install --quiet pyinstaller pywebview
 
 echo "==> Running PyInstaller"
 export FFMPEG_BINARY_PATH="$FFMPEG_BIN"
@@ -127,10 +120,20 @@ write_ffmpeg_licenses "$STAGE/licenses" "$FFVER"
 
 ( cd "$BUILD_DIR/stage" && ditto -c -k --sequesterRsrc --keepParent "$APP_NAME" "$DIST_DIR/$APP_NAME.zip" )
 
+# PyInstaller's COLLECT stage leaves its onedir output ("$DIST_DIR/$APP_NAME/")
+# beside the finished .app that BUNDLE wrapped around it. On macOS that folder
+# is a ~100MB intermediate nobody should open — and having two things in
+# dist-gui that both look like the app is just confusing. Drop it; the .app and
+# the .zip are the only real outputs.
+rm -rf "${DIST_DIR:?}/$APP_NAME"
+
 deactivate || true
 echo ""
-echo "Done."
+echo "Done. Two outputs, nothing else:"
 echo "  App: $APP_DIR"
-echo "  Zip: $DIST_DIR/$APP_NAME.zip  (send this)"
+echo "       (double-click to run it here)"
+echo "  Zip: $DIST_DIR/$APP_NAME.zip  <- send THIS"
 echo ""
 echo "NOTE: unsigned — first launch on another Mac is right-click -> Open -> Open."
+echo "NOTE: macOS only. Windows cannot be cross-compiled from here; that build"
+echo "      comes from the windows-latest job in .github/workflows/release.yml."

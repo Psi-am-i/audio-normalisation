@@ -1,4 +1,4 @@
-# Psi's DJ Normalization (in a good way!) - by Picnic Labs
+# Very Thoughtful DJ Normalization - by Picnic Labs
 
 Professional audio normalization system for DJing. Normalizes music files to
 consistent -12 LUFS loudness for club playback on high-quality sound systems.
@@ -16,9 +16,9 @@ Never fiddle with trim again...
 
 ** INSTALLATION **
 
-**macOS** (`PsiDJNormalizer-macos.zip`, Apple Silicon):
+**macOS** (`VTDNormalization-macos.zip`, Apple Silicon):
 
-1. Unzip and drag `PsiDJNormalizer.app` to your Applications folder.
+1. Unzip and drag `Very Thoughtful DJ Normalization.app` to your Applications folder.
 2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
    - **Right-click → Open → Open** It will give an error. Go to System
      Settings → Privacy & Security, scroll down and say allow ("Open Anyway").
@@ -26,24 +26,30 @@ Never fiddle with trim again...
    - **Self-sign it** — Before launch, open Terminal and paste the line below.
      Then it will behave like any normal app from then on:
      ```bash
-     codesign --force --deep -s - /Applications/PsiDJNormalizer.app && xattr -rd com.apple.quarantine /Applications/PsiDJNormalizer.app
+     codesign --force --deep -s - '/Applications/Very Thoughtful DJ Normalization.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful DJ Normalization.app'
      ```
-3. Start it by double-clicking, or `open /Applications/PsiDJNormalizer.app`.
+3. Start it by double-clicking, or `open '/Applications/Very Thoughtful DJ Normalization.app'`.
 
-**Windows** (`PsiDJNormalizer-windows.zip`):
+**Windows** (`VTDNormalization-windows.zip`):
 
 1. Unzip the whole folder somewhere (keep the files together).
-2. Double-click `PsiDJNormalizer.exe`. If SmartScreen objects, click
+2. Double-click `VTDNormalization.exe`. If SmartScreen objects, click
    **More info → Run anyway** (needed once only).
 
 ## In the window
 
-- [ SOURCE ]       pick the folder with your tracks
-- [ DESTINATION ]  pick where the normalized files go
-- FORMAT           opens a menu: AIFF / FLAC / WAV / MP3 / AAC
-- 320k             bitrate menu for MP3/AAC (320 / 256 / 192)
-- ABOUT            the full gear-compatibility rundown
-- > NORMALIZE      go
+- FROM      pick the folder with your tracks
+- TO        pick where the normalized files go
+- FORMAT    AIFF / FLAC / WAV / MP3 / AAC (bitrate appears for MP3/AAC)
+- ABOUT     the full gear-compatibility rundown
+
+Under the format row is a line telling you exactly what will happen to your
+audio — e.g. "41 of 128 tracks are lossless — they stay lossless" — counted
+from your own files, and it turns into a warning if you pick a lossy format.
+
+While it runs you get a live list: what is queued, what is processing now, and
+what is done. Stop is graceful — it finishes the track it is on, so nothing is
+left half-written.
 
 ## How It Works
 
@@ -73,14 +79,19 @@ loudness normalization:
 ### Output Formats & Pioneer Gear Compatibility
 
 Five output formats are available in every mode (CLI menu, GUI FORMAT/BITRATE
-buttons, `output_format` + `bitrate` in `config.json`). All output is pinned to
-44.1 kHz — CDJs/rekordbox reject anything above 48 kHz.
+buttons, `output_format` + `bitrate` in `config.json`).
+
+Lossless stays lossless: output keeps the source's OWN sample rate, up to
+48 kHz. A 44.1 kHz track stays 44.1 kHz, a 48 kHz master stays 48 kHz. Only
+sources above 48 kHz (88.2/96 kHz) are resampled, and then to 48 kHz — the
+highest rate every Pioneer/AlphaTheta player accepts, so everything this app
+writes plays on all of them.
 
 | Format | Type | Bitrate | Pioneer support |
 |--------|------|---------|-----------------|
 | **AIFF** (default) | Lossless, uncompressed 24-bit | — | **ALL** CDJ/XDJ gear |
 | **WAV** | Lossless, uncompressed 16-bit | — | **ALL** CDJ/XDJ gear |
-| **FLAC** | Lossless, compressed (much smaller) | — | **Newer gear only** — see below |
+| **FLAC** | Lossless, compressed 24-bit (much smaller) | — | **Newer gear only** — see below |
 | **MP3** | Lossy (libmp3lame, ID3v2.3) | 320/256/192 kbps | **ALL** CDJ/XDJ gear |
 | **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | All **modern** gear — see below |
 

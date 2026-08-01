@@ -2,8 +2,8 @@ name: Release builds
 
 # Builds the distributable apps. PyInstaller cannot cross-compile, so each OS
 # bundle is produced on a runner of that OS:
-#   - windows-latest -> PsiDJNormalizer-windows.zip (.exe onedir + ffmpeg.exe)
-#   - macos-latest   -> PsiDJNormalizer-macos.zip   (.app, Apple Silicon)
+#   - windows-latest -> VTDNormalization-windows.zip (.exe onedir + ffmpeg.exe)
+#   - macos-latest   -> VTDNormalization-macos.zip   (.app, Apple Silicon)
 # On a v* tag the zips are attached to a GitHub release. Also runnable by hand
 # from the Actions tab (workflow_dispatch) to get artifacts without a release.
 
@@ -20,14 +20,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install ffmpeg, Tk and a virtual display
+      # No Tk and no virtual display any more: the interface is HTML in a
+      # webview, and the smoke test deliberately checks the shell/page contract
+      # without opening a window. ffmpeg is the only requirement.
+      - name: Install ffmpeg
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg python3-tk xvfb
+          sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Format engine tests (all formats + bitrates, LUFS re-measured)
         run: python3 tests/test_formats.py
-      - name: GUI smoke test (virtual display)
-        run: xvfb-run -a python3 tests/test_gui_smoke.py
+      - name: GUI smoke test (shell/page contract, no display needed)
+        run: python3 tests/test_gui_smoke.py
 
   windows:
     needs: test
@@ -47,7 +50,7 @@ jobs:
           & "$env:GITHUB_WORKSPACE\ffmpeg.exe" -version | Select-Object -First 1
       - name: Generate background + install build deps
         run: |
-          pip install pillow pyinstaller
+          pip install pillow pyinstaller pywebview
           python packaging/make_bg.py
       - name: PyInstaller build
         env:
@@ -58,37 +61,33 @@ jobs:
         run: |
           source packaging/lib_licenses.sh
           FFVER="$(./ffmpeg.exe -version | head -1)"
-          write_ffmpeg_licenses "dist-win/PsiDJNormalizer/licenses" "$FFVER"
+          write_ffmpeg_licenses "dist-win/VTDNormalization/licenses" "$FFVER"
           # Canonical recipient README, shared with the macOS build
-          cp packaging/APP_README.txt dist-win/PsiDJNormalizer/README.txt
-          cd dist-win && 7z a ../PsiDJNormalizer-windows.zip PsiDJNormalizer
+          cp packaging/APP_README.txt dist-win/VTDNormalization/README.txt
+          cd dist-win && 7z a ../VTDNormalization-windows.zip VTDNormalization
       - uses: actions/upload-artifact@v4
         with:
-          name: PsiDJNormalizer-windows
-          path: PsiDJNormalizer-windows.zip
+          name: VTDNormalization-windows
+          path: VTDNormalization-windows.zip
 
   macos:
     needs: test
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install a Python with a click-safe Tk (>= 8.6.13)
-        run: brew install python-tk@3.13
       - name: Generate background (repo has no personal photo)
         run: |
           python3 -m venv bgvenv
           bgvenv/bin/pip install --quiet pillow
           bgvenv/bin/python packaging/make_bg.py
       - name: Build .app
-        env:
-          PYTHON: /opt/homebrew/bin/python3.13
         run: packaging/build_gui_app.sh
       - name: Rename zip
-        run: mv packaging/dist-gui/PsiDJNormalizer.zip PsiDJNormalizer-macos.zip
+        run: mv packaging/dist-gui/VTDNormalization.zip VTDNormalization-macos.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: PsiDJNormalizer-macos
-          path: PsiDJNormalizer-macos.zip
+          name: VTDNormalization-macos
+          path: VTDNormalization-macos.zip
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -104,6 +103,6 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --generate-notes \
-            PsiDJNormalizer-windows.zip PsiDJNormalizer-macos.zip \
+            VTDNormalization-windows.zip VTDNormalization-macos.zip \
           || gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --clobber PsiDJNormalizer-windows.zip PsiDJNormalizer-macos.zip
+            --clobber VTDNormalization-windows.zip VTDNormalization-macos.zip
