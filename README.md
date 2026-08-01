@@ -21,16 +21,28 @@ Grab the GUI app for your platform from the
 [releases page](https://github.com/Psi-am-i/audio-normalisation/releases/latest).
 Python and ffmpeg are bundled inside.
 
-**macOS** (`VTNormalisation-macos.zip`, Apple Silicon):
+**macOS** (`VTNormalisation-macos.zip`) — **one download, runs natively on both
+Apple Silicon and Intel.** No need to work out which Mac you have.
 
-1. Unzip and drag `Very Thoughtful Normalisation (but in a good way).app` to your Applications folder.
-2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
-   - **Right-click → Open → Open** It will give an error. Go to System & Security, scroll down and say allow. Then open again (only need to doo this once), or
-   - **Self-sign it** — Before launch, open Terminal and paste the line below. Then it will behave like any normal app from then on:
-     ```bash
-     codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation (but in a good way).app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation (but in a good way).app'
-     ```
-3. Start it by double-clicking, or `open '/Applications/Very Thoughtful Normalisation (but in a good way).app'`.
+1. Unzip and drag **Very Thoughtful Normalisation.app** to your Applications
+   folder.
+2. The app isn't signed with a paid Apple certificate, so macOS blocks it.
+   Self-sign it once — open Terminal, paste this whole line, press Return:
+   ```bash
+   codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
+   ```
+3. That's it — open it by double-clicking, now and forever after.
+
+> **Why the Terminal step?** Removing that warning permanently means paying
+> Apple $99/year for a Developer ID. This app is free, so it borrows the same
+> approach Radarr, Sonarr and friends use: you sign it yourself, locally, in one
+> command. The command re-signs the app with your own machine's ad-hoc signature
+> and clears the "downloaded from the internet" quarantine flag. Nothing is sent
+> anywhere.
+>
+> Don't bother with right-click → Open — **macOS 15 (Sequoia) removed that
+> shortcut.** Since then it's a trip through System Settings → Privacy &
+> Security and an admin password, every bit of which the one-liner above skips.
 
 **Windows** (`VTNormalisation-windows.zip`):
 

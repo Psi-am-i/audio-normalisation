@@ -16,19 +16,30 @@ Never fiddle with trim again...
 
 ** INSTALLATION **
 
-**macOS** (`VTNormalisation-macos.zip`, Apple Silicon):
+**macOS** (`VTNormalisation-macos.zip`)
 
-1. Unzip and drag `Very Thoughtful Normalisation (but in a good way).app` to your Applications folder.
-2. The app is unsigned, so macOS blocks the first launch. Pick either fix:
-   - **Right-click → Open → Open** It will give an error. Go to System
-     Settings → Privacy & Security, scroll down and say allow ("Open Anyway").
-     Then open again (only need to do this once), or
-   - **Self-sign it** — Before launch, open Terminal and paste the line below.
-     Then it will behave like any normal app from then on:
-     ```bash
-     codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation (but in a good way).app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation (but in a good way).app'
-     ```
-3. Start it by double-clicking, or `open '/Applications/Very Thoughtful Normalisation (but in a good way).app'`.
+ONE download — it runs natively on both Apple Silicon and Intel Macs, so there
+is nothing to choose between.
+
+1. Unzip and drag "Very Thoughtful Normalisation.app" into your Applications
+   folder.
+
+2. The app isn't signed with a paid Apple certificate, so macOS will block it.
+   Self-sign it once: open Terminal, paste this WHOLE line, press Return.
+
+   codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
+
+3. Done — double-click to open it, now and every time after.
+
+Why the Terminal step? Removing that warning permanently costs $99/year for an
+Apple Developer ID. This app is free, so it uses the same approach Radarr and
+Sonarr do: you sign it yourself, on your own machine, in one command. It
+re-signs the app with a local ad-hoc signature and clears the "downloaded from
+the internet" flag. Nothing is sent anywhere.
+
+Don't bother with right-click then Open — macOS 15 (Sequoia) removed that
+shortcut. Since then it means a trip through System Settings > Privacy &
+Security plus an admin password. The one-liner above skips all of it.
 
 **Windows** (`VTNormalisation-windows.zip`):
 
