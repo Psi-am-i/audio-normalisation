@@ -26,7 +26,21 @@ packaging/BUILD.md and the recipient README).
 
 import os
 
+from PyInstaller.utils.hooks import collect_all
+
 repo_root = os.path.dirname(SPECPATH)
+
+# pywebview on Windows does NOT load the edgechromium module directly: it loads
+# webview.platforms.winforms (see webview/guilib.py import_winforms), which is a
+# .NET WinForms host, and EdgeChromium is only the renderer inside it. That host
+# runs on pythonnet, whose clr_loader ships runtime DLLs and .runtimeconfig.json
+# as DATA files — PyInstaller does not pick those up from an import graph alone.
+#
+# Declaring only 'webview.platforms.edgechromium' produced an app that showed a
+# window and then hung, because the WinForms/pythonnet host never came up.
+# collect_all pulls the modules, binaries and data for each.
+_pn_datas, _pn_bins, _pn_hidden = collect_all('pythonnet')
+_cl_datas, _cl_bins, _cl_hidden = collect_all('clr_loader')
 ffmpeg_binary = os.environ.get('FFMPEG_BINARY_PATH')
 if not ffmpeg_binary or not os.path.exists(ffmpeg_binary):
     raise SystemExit(
@@ -47,9 +61,17 @@ if not os.path.exists(bg_png):
 a = Analysis(
     [os.path.join(repo_root, 'webapp.py')],
     pathex=[repo_root],
-    binaries=[(ffmpeg_binary, '.')],
-    datas=[(html, '.'), (bg_png, 'gui_assets')],
-    hiddenimports=['webview', 'webview.platforms.edgechromium', 'normalizer'],
+    binaries=[(ffmpeg_binary, '.'), *_pn_bins, *_cl_bins],
+    datas=[(html, '.'), (bg_png, 'gui_assets'), *_pn_datas, *_cl_datas],
+    hiddenimports=[
+        'webview',
+        'webview.platforms.winforms',      # the actual Windows host
+        'webview.platforms.edgechromium',  # the renderer it uses
+        'clr',                             # pythonnet's entry point
+        'clr_loader',
+        'normalizer',
+        *_pn_hidden, *_cl_hidden,
+    ],
     hookspath=[],
     runtime_hooks=[],
     excludes=['tkinter', 'watchdog', 'tqdm', 'PIL', 'numpy', 'pytest'],

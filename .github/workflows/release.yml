@@ -56,6 +56,38 @@ jobs:
         env:
           FFMPEG_BINARY_PATH: ${{ github.workspace }}\ffmpeg.exe
         run: pyinstaller --clean --noconfirm --distpath dist-win --workpath build-win packaging/normalizer-gui-win.spec
+      # pywebview's Windows host is webview.platforms.winforms running on
+      # pythonnet. If those are missing the app opens a window and HANGS with no
+      # error — it is not a crash, so nothing is logged and nothing exits
+      # non-zero. Fail the build here instead of shipping that.
+      - name: Verify the .NET/pywebview host is bundled
+        shell: bash
+        run: |
+          set -e
+          root=dist-win/VTNormalisation
+          fail=0
+          need_file() {
+            if find "$root" -iname "$1" | grep -q .; then
+              echo "  ok   $1"
+            else
+              echo "  MISSING  $1"; fail=1
+            fi
+          }
+          echo "Windows GUI host components:"
+          need_file "Python.Runtime.dll"     # pythonnet <-> .NET bridge
+          need_file "clr.pyd"                # pythonnet import entry point
+          need_file "*.runtimeconfig.json"   # clr_loader runtime selection
+          need_file "winforms.pyc"           # the pywebview Windows host
+          need_file "edgechromium.pyc"       # the WebView2 renderer
+          echo "App payload:"
+          need_file "vtdn_app.html"
+          need_file "background.png"
+          need_file "ffmpeg.exe"
+          if [ "$fail" -ne 0 ]; then
+            echo "ERROR: the Windows bundle is missing components the GUI needs to start."
+            exit 1
+          fi
+
       - name: Add licenses + README, zip
         shell: bash
         run: |

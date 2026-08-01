@@ -548,6 +548,19 @@ def main(argv: list[str] | None = None) -> int:
     window.events.loaded += lambda: (log.info("window loaded"),
                                      window.evaluate_js(_BRIDGE_JS),
                                      _constrain_window(window))
+
+    # Record which GUI backend pywebview resolved BEFORE handing control to it.
+    # On Windows the host is webview.platforms.winforms running on pythonnet; if
+    # that cannot load, the app shows a window and then hangs with no error
+    # anywhere. A hang is not a crash, so the exception handler below never
+    # fires and the log would otherwise just stop — leaving nothing to go on.
+    try:
+        import webview.guilib as _guilib
+        log.info("pywebview backend: %s", getattr(_guilib, "guilib", None) or "not yet resolved")
+    except Exception as e:  # noqa: BLE001
+        log.warning("could not determine pywebview backend: %s", e)
+    log.info("calling webview.start() — anything after this is the GUI loop")
+
     try:
         webview.start()
     except Exception:
