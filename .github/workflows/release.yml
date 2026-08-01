@@ -65,26 +65,38 @@ jobs:
         run: |
           set -e
           root=dist-win/VTNormalisation
+          toc=$(find build-win -name 'Analysis-00.toc' | head -1)
           fail=0
+
+          # Loose files on disk: binaries and data only. Pure-Python modules are
+          # NOT here — with noarchive=False they live inside the PYZ archive, so
+          # looking for winforms.pyc on disk always "fails" even when it is
+          # correctly bundled.
           need_file() {
-            if find "$root" -iname "$1" | grep -q .; then
-              echo "  ok   $1"
-            else
-              echo "  MISSING  $1"; fail=1
-            fi
+            if find "$root" -iname "$1" | grep -q .; then echo "  ok   $1"
+            else echo "  MISSING  $1"; fail=1; fi
           }
-          echo "Windows GUI host components:"
+          # Modules: check what Analysis actually collected.
+          need_mod() {
+            if grep -q "'$1'" "$toc"; then echo "  ok   $1"
+            else echo "  MISSING  $1"; fail=1; fi
+          }
+
+          echo "Binaries / data on disk:"
           need_file "Python.Runtime.dll"     # pythonnet <-> .NET bridge
-          need_file "clr.pyd"                # pythonnet import entry point
-          need_file "*.runtimeconfig.json"   # clr_loader runtime selection
-          need_file "winforms.pyc"           # the pywebview Windows host
-          need_file "edgechromium.pyc"       # the WebView2 renderer
-          echo "App payload:"
+          need_file "ffmpeg.exe"
           need_file "vtdn_app.html"
           need_file "background.png"
-          need_file "ffmpeg.exe"
+
+          echo "Modules collected (from $toc):"
+          need_mod "webview.platforms.winforms"      # the actual Windows host
+          need_mod "webview.platforms.edgechromium"  # the WebView2 renderer
+          need_mod "clr"                             # pythonnet entry point
+          need_mod "clr_loader"
+
           if [ "$fail" -ne 0 ]; then
             echo "ERROR: the Windows bundle is missing components the GUI needs to start."
+            echo "The app would open a window and hang, with nothing logged."
             exit 1
           fi
 
