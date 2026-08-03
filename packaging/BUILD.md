@@ -1,5 +1,10 @@
 # Building the distributable app
 
+> **Building for Windows?** Read
+> [WINDOWS-GOTCHAS.md](WINDOWS-GOTCHAS.md) first. Every issue in it was hit
+> for real, none of them failed the build, and all were invisible on macOS.
+
+
 This produces `Normalizer.app` — a self-contained, double-clickable macOS app
 that bundles Python, the normalizer, and a static **ffmpeg**. Recipients install
 nothing. Double-clicking opens a Terminal window with the interactive flow
