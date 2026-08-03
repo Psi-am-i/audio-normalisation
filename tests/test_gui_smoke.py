@@ -124,6 +124,29 @@ def main():
         check(f"html literal knows {key}", re.search(rf"\b{key}\s*:\s*\{{", html) is not None)
 
     print()
+    print("[no console windows on Windows]")
+    # A windowed Windows app has no console, so each child process gets a fresh
+    # one that flashes on screen. The engine spawns ffmpeg once per file to
+    # probe and twice more to encode, so a folder of tracks strobed console
+    # windows across the desktop. Every spawn must pass CREATE_NO_WINDOW.
+    import ast as _ast
+    for mod, src_path in (("normalizer", normalizer.__file__), ("webapp", webapp.__file__)):
+        tree = _ast.parse(Path(src_path).read_text(encoding="utf-8"))
+        for node in _ast.walk(tree):
+            if not (isinstance(node, _ast.Call)
+                    and isinstance(node.func, _ast.Attribute)
+                    and node.func.attr == "run"
+                    and getattr(node.func.value, "id", "") == "subprocess"):
+                continue
+            guarded = any(k.arg is None for k in node.keywords) or any(
+                k.arg == "creationflags" for k in node.keywords)
+            check(f"{mod}.py:{node.lineno} subprocess.run suppresses the console",
+                  guarded, "missing **_NO_CONSOLE_WINDOW / creationflags")
+    check("the flag is empty off Windows",
+          normalizer._NO_CONSOLE_WINDOW == {} or sys.platform == "win32",
+          str(normalizer._NO_CONSOLE_WINDOW))
+
+    print()
     print("[scan classifies sources]")
     with tempfile.TemporaryDirectory(prefix="vtdn_smoke_") as tmp:
         d = Path(tmp)

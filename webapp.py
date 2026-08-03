@@ -144,7 +144,8 @@ def _ffmpeg_version() -> str:
         out = subprocess.run([normalizer.resolve_ffmpeg(), "-version"],
                              capture_output=True, text=True,
                              encoding="utf-8", errors="replace",
-                             stdin=subprocess.DEVNULL, timeout=60).stdout
+                             stdin=subprocess.DEVNULL, timeout=60,
+                             **normalizer._NO_CONSOLE_WINDOW).stdout
         m = re.search(r"ffmpeg version (\S+)", out)
         if m:
             version = m.group(1).split("-")[0]

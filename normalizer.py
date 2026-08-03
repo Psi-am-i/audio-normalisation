@@ -129,6 +129,20 @@ OUTPUT_FORMATS = {
 }
 
 
+# Windows: a windowed app (console=False) has no console of its own, so every
+# child process gets a brand new one — which flashes on screen and steals focus.
+# The engine spawns ffmpeg once per file to probe it and twice more to encode
+# it, so a folder of 50 tracks produced a strobe of ~150 console windows.
+#
+# CREATE_NO_WINDOW suppresses it. Exists only on Windows, hence the guard; on
+# macOS and Linux this is an empty dict and nothing changes.
+_NO_CONSOLE_WINDOW = (
+    {'creationflags': subprocess.CREATE_NO_WINDOW}
+    if sys.platform == 'win32' and hasattr(subprocess, 'CREATE_NO_WINDOW')
+    else {}
+)
+
+
 _AAC_ENCODER = None
 
 
@@ -144,7 +158,8 @@ def aac_encoder() -> str:
         try:
             out = subprocess.run([resolve_ffmpeg(), '-hide_banner', '-encoders'],
                                  capture_output=True, text=True,
-                                 encoding='utf-8', errors='replace').stdout
+                                 encoding='utf-8', errors='replace',
+                                 **_NO_CONSOLE_WINDOW).stdout
             _AAC_ENCODER = 'aac_at' if ' aac_at ' in out else 'aac'
         except Exception:
             _AAC_ENCODER = 'aac'
@@ -310,7 +325,8 @@ def probe_source(input_file: str) -> Dict:
     try:
         result = subprocess.run(
             [resolve_ffmpeg(), '-hide_banner', '-i', input_file],
-            capture_output=True, text=True, encoding='utf-8', errors='replace')
+            capture_output=True, text=True, encoding='utf-8', errors='replace',
+            **_NO_CONSOLE_WINDOW)
         return _parse_input_stream(result.stderr)
     except OSError:
         return {'codec': None, 'sample_rate': None, 'bits': None, 'lossless': None}
@@ -434,6 +450,7 @@ def _analyze(input_file: str,
             # ffmpeg speaks UTF-8; the locale default is cp1252 on
             # Windows, which mangles or fails on non-ASCII output.
             encoding='utf-8', errors='replace',
+            **_NO_CONSOLE_WINDOW,
             check=True
         )
 
@@ -610,6 +627,7 @@ def normalize_audio(
             # ffmpeg speaks UTF-8; the locale default is cp1252 on
             # Windows, which mangles or fails on non-ASCII output.
             encoding='utf-8', errors='replace',
+            **_NO_CONSOLE_WINDOW,
             check=True
         )
 
