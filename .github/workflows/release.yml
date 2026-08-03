@@ -87,13 +87,28 @@ jobs:
           need_file "ffmpeg.exe"
           need_file "vtdn_app.html"
 
-          # The background is a data: URI inside the HTML now, not a
-          # separate file — assert it actually got inlined.
-          if grep -q "url('data:image" "$root"/**/vtdn_app.html 2>/dev/null \
-             || grep -rq "url(.data:image" "$root" --include=vtdn_app.html; then
-            echo "  ok   background inlined as a data: URI"
+          # The background is a data: URI inside the HTML, not a separate file.
+          # Checking only that SOME image is inlined is not enough: when the
+          # texture was gitignored, make_bg.py fell back to a flat procedural
+          # gradient and the apps shipped with no texture at all — and this
+          # check happily passed. The gradient is ~28 KB; a real texture is
+          # hundreds. Assert on size so the fallback cannot ship unnoticed.
+          page=$(find "$root" -name vtdn_app.html | head -1)
+          if [ -z "$page" ]; then
+            echo "  MISSING  vtdn_app.html"; fail=1
           else
-            echo "  MISSING  background inlined as a data: URI"; fail=1
+            bytes=$(wc -c < "$page")
+            echo "  interface page: $((bytes / 1024)) KB"
+            if ! grep -q "url(.data:image" "$page"; then
+              echo "  MISSING  background inlined as a data: URI"; fail=1
+            elif [ "$bytes" -lt 300000 ]; then
+              echo "  MISSING  a real background texture — page is only"
+              echo "           $((bytes / 1024)) KB, so make_bg.py almost certainly"
+              echo "           fell back to the procedural gradient."
+              fail=1
+            else
+              echo "  ok   background inlined, and big enough to be the real texture"
+            fi
           fi
 
           echo "Modules collected (from $toc):"

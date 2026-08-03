@@ -6,11 +6,17 @@ runtime.
 
     python3 packaging/make_bg.py
 
-Reads  gui_assets/background_source.jpg  (personal photo, not in the repo)
+Source image, first match wins:
+  1. gui_assets/background_source.*   a personal photo, gitignored — a local
+                                      override that never enters the repo
+  2. gui_assets/vinyl-texture.jpg     the app's own texture, TRACKED so CI has it
+  3. a procedural gradient            last resort
+
 Writes gui_assets/background.png  (BG_W x BG_H, grey/blue tinted)
 
-If the source photo is missing (e.g. CI builds of this public repo), a
-procedural grey/blue gradient is generated instead so the build still works.
+The tracked texture matters: when only the gitignored name existed, every CI
+build silently fell back to the procedural gradient and the shipped apps went
+out with a flat near-black background and no texture at all.
 
 The grey/blue ramp matches the app palette (ground #0E1217, panel #19202A,
 accent #5AA9F0). The intended source is a vinyl-groove macro — the grooves give
@@ -25,7 +31,9 @@ from PIL import Image, ImageOps, ImageEnhance
 BG_W, BG_H = 1400, 1000
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "gui_assets" / "background_source.jpg"
+# Personal override first, then the tracked texture. glob so any extension works.
+_OVERRIDES = sorted((ROOT / "gui_assets").glob("background_source.*"))
+SRC = _OVERRIDES[0] if _OVERRIDES else (ROOT / "gui_assets" / "vinyl-texture.jpg")
 DST = ROOT / "gui_assets" / "background.png"
 
 # Luminance -> cool grey/blue ramp, matching the palette (ground #0E1217, panel
@@ -65,6 +73,7 @@ def procedural_background() -> Image.Image:
 
 def main() -> None:
     if SRC.exists():
+        print(f"using {SRC.relative_to(ROOT)}")
         img = ImageOps.exif_transpose(Image.open(SRC)).convert("RGB")
         # Only rotate a PORTRAIT source. The rotation used to be unconditional,
         # which suited the original upright photo but would tip a landscape
@@ -73,7 +82,8 @@ def main() -> None:
             img = img.rotate(-90, expand=True)
         img = ImageOps.fit(img, (BG_W, BG_H), method=Image.LANCZOS)   # cover-crop
     else:
-        print(f"note: {SRC.name} not found — generating procedural background")
+        print(f"WARNING: no source image found ({SRC.name} missing) — falling back\n"
+              f"         to a procedural gradient. The app will have NO texture.")
         img = procedural_background()
 
     gray = ImageOps.grayscale(img)
