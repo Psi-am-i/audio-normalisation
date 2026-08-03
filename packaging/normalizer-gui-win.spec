@@ -25,6 +25,7 @@ packaging/BUILD.md and the recipient README).
 """
 
 import os
+import sys
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -48,21 +49,28 @@ if not ffmpeg_binary or not os.path.exists(ffmpeg_binary):
         "See .github/workflows/release.yml for how CI obtains one."
     )
 
-html = os.path.join(repo_root, 'vtdn_app.html')
-if not os.path.exists(html):
-    raise SystemExit("vtdn_app.html missing from the repo.")
+# The interface is inlined at build time: the background becomes a data: URI so
+# the shipped page has no external references. A relative sibling path works on
+# macOS/WKWebView but silently failed to load under Windows/WebView2, which
+# serves the page over pywebview's local HTTP server — the app ran fine but with
+# no background at all. See packaging/inline_assets.py.
+import subprocess as _sp
+import tempfile as _tf
 
-bg_png = os.path.join(repo_root, 'gui_assets', 'background.png')
-if not os.path.exists(bg_png):
-    raise SystemExit(
-        "gui_assets/background.png missing. Run: python packaging/make_bg.py"
-    )
+# WORKPATH is not a spec global in PyInstaller 6.x, and the file must keep
+# the basename 'vtdn_app.html' because PyInstaller preserves it and
+# webapp.py looks that name up in the bundle.
+html = os.path.join(_tf.mkdtemp(prefix='vtn-inlined-'), 'vtdn_app.html')
+_sp.run([sys.executable, os.path.join(repo_root, 'packaging', 'inline_assets.py'), html],
+        check=True)
+if not os.path.exists(html):
+    raise SystemExit("inline_assets.py did not produce the interface HTML.")
 
 a = Analysis(
     [os.path.join(repo_root, 'webapp.py')],
     pathex=[repo_root],
     binaries=[(ffmpeg_binary, '.'), *_pn_bins, *_cl_bins],
-    datas=[(html, '.'), (bg_png, 'gui_assets'), *_pn_datas, *_cl_datas],
+    datas=[(html, '.'), *_pn_datas, *_cl_datas],
     hiddenimports=[
         'webview',
         'webview.platforms.winforms',      # the actual Windows host

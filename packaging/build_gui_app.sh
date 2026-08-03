@@ -167,7 +167,10 @@ echo "==> Creating build virtualenv"
 source "$VENV_DIR/bin/activate"
 pip install --quiet --upgrade pip
 # pywebview pulls the pyobjc WKWebView backend on macOS
-pip install --quiet pyinstaller pywebview
+# pillow: the spec inlines the background into the HTML and re-encodes
+# it as JPEG (see packaging/inline_assets.py). Without pillow it still
+# builds, but embeds the far larger PNG.
+pip install --quiet pyinstaller pywebview pillow
 
 echo "==> Running PyInstaller"
 export FFMPEG_BINARY_PATH="$FFMPEG_BIN"

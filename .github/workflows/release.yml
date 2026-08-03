@@ -86,7 +86,15 @@ jobs:
           need_file "Python.Runtime.dll"     # pythonnet <-> .NET bridge
           need_file "ffmpeg.exe"
           need_file "vtdn_app.html"
-          need_file "background.png"
+
+          # The background is a data: URI inside the HTML now, not a
+          # separate file — assert it actually got inlined.
+          if grep -q "url('data:image" "$root"/**/vtdn_app.html 2>/dev/null \
+             || grep -rq "url(.data:image" "$root" --include=vtdn_app.html; then
+            echo "  ok   background inlined as a data: URI"
+          else
+            echo "  MISSING  background inlined as a data: URI"; fail=1
+          fi
 
           echo "Modules collected (from $toc):"
           need_mod "webview.platforms.winforms"      # the actual Windows host
