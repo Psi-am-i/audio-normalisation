@@ -51,7 +51,15 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none
 button:disabled{cursor:default}
 
 /* The photo sits under everything, dimmed to texture. A scrim keeps text legible
-   no matter what the user's own background_source.jpg looks like. */
+   no matter what the user's own background_source.jpg looks like.
+
+   NOTE: no backdrop-filter anywhere. The panels used to blur what was behind
+   them (the card at blur(16px)), which meant WebView2 recomposited this
+   full-viewport image on every frame. On Windows — particularly with software
+   rendering, which is common — that pegged the renderer and the window sat at
+   "Not Responding", recovering briefly and stalling again, with the app idle
+   and untouched. The panels are simply more opaque instead; over a background
+   this dark the blur was barely visible anyway. */
 #bg{position:fixed;inset:0;z-index:0;
   background:url('gui_assets/background.png') center/cover no-repeat;
   opacity:.9}
@@ -69,7 +77,7 @@ button:disabled{cursor:default}
 /* ── brow ─────────────────────────────────────────────────────────────── */
 .brow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
   padding:11px 20px;border-bottom:1px solid var(--rule);
-  background:rgba(14,18,23,.55);backdrop-filter:blur(6px)}
+  background:rgba(14,18,23,.82)}
 .brow-l{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--bone-3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brow-l b{color:var(--bone-2);font-weight:600}
@@ -90,9 +98,9 @@ button:disabled{cursor:default}
 .wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:22px;overflow:auto}
 /* Slightly more opaque and a stronger blur now the background behind it is a
    real texture rather than a near-black wash — the panel has to hold its own. */
-.card{width:100%;max-width:660px;background:rgba(25,32,42,.88);
+.card{width:100%;max-width:660px;background:rgba(25,32,42,.94);
   border:1px solid var(--rule);border-radius:var(--r);
-  box-shadow:0 24px 70px -18px rgba(0,0,0,.85);backdrop-filter:blur(16px) saturate(1.1);
+  box-shadow:0 24px 70px -18px rgba(0,0,0,.85);
   padding:6px 24px 22px}
 
 .row{padding:15px 0;border-bottom:1px solid var(--rule)}
@@ -196,7 +204,7 @@ button:disabled{cursor:default}
 
 /* ── sheets ───────────────────────────────────────────────────────────── */
 .sheet{position:fixed;inset:0;z-index:40;display:none;
-  background:rgba(8,11,15,.86);backdrop-filter:blur(4px);
+  background:rgba(8,11,15,.94);
   align-items:center;justify-content:center;padding:22px}
 .sheet.open{display:flex}
 .sheet-c{width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;
