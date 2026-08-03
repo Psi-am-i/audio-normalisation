@@ -143,7 +143,8 @@ def aac_encoder() -> str:
     if _AAC_ENCODER is None:
         try:
             out = subprocess.run([resolve_ffmpeg(), '-hide_banner', '-encoders'],
-                                 capture_output=True, text=True).stdout
+                                 capture_output=True, text=True,
+                                 encoding='utf-8', errors='replace').stdout
             _AAC_ENCODER = 'aac_at' if ' aac_at ' in out else 'aac'
         except Exception:
             _AAC_ENCODER = 'aac'
@@ -309,7 +310,7 @@ def probe_source(input_file: str) -> Dict:
     try:
         result = subprocess.run(
             [resolve_ffmpeg(), '-hide_banner', '-i', input_file],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding='utf-8', errors='replace')
         return _parse_input_stream(result.stderr)
     except OSError:
         return {'codec': None, 'sample_rate': None, 'bits': None, 'lossless': None}
@@ -430,6 +431,9 @@ def _analyze(input_file: str,
             cmd,
             capture_output=True,
             text=True,
+            # ffmpeg speaks UTF-8; the locale default is cp1252 on
+            # Windows, which mangles or fails on non-ASCII output.
+            encoding='utf-8', errors='replace',
             check=True
         )
 
@@ -603,6 +607,9 @@ def normalize_audio(
             cmd,
             capture_output=True,
             text=True,
+            # ffmpeg speaks UTF-8; the locale default is cp1252 on
+            # Windows, which mangles or fails on non-ASCII output.
+            encoding='utf-8', errors='replace',
             check=True
         )
 

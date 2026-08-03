@@ -90,6 +90,32 @@ def _install_crash_handlers() -> None:
         pass
 
 
+def _make_stdio_safe() -> None:
+    """
+    Stop a track's filename from being able to kill the run.
+
+    The engine prints progress lines containing the filename. On Windows those
+    go to a cp1252 stream, and cp1252 cannot represent most of what turns up in
+    real music libraries — accents, CJK, em dashes, and the private-use
+    characters macOS substitutes for '/' in filenames. Printing one raised
+    UnicodeEncodeError ("'charmap' codec can't encode character '\\uf022'"),
+    which surfaced as a failed track for a file that was otherwise perfectly
+    fine.
+
+    Reconfiguring to UTF-8 with errors='replace' means an awkward character can
+    at worst print as a placeholder, never abort the encode. Guarded because a
+    windowed frozen app may have no stdout at all.
+    """
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        if stream is None:
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 — not all streams support it
+            pass
+
+
 def _resource_base() -> Path:
     """Bundled resources live beside the executable in a frozen app, beside this
     file when run from source."""
@@ -117,6 +143,7 @@ def _ffmpeg_version() -> str:
     try:
         out = subprocess.run([normalizer.resolve_ffmpeg(), "-version"],
                              capture_output=True, text=True,
+                             encoding="utf-8", errors="replace",
                              stdin=subprocess.DEVNULL, timeout=60).stdout
         m = re.search(r"ffmpeg version (\S+)", out)
         if m:
@@ -557,6 +584,7 @@ def _constrain_window(window) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _make_stdio_safe()          # before anything can print a filename
     log_path = _setup_logging()
     _install_crash_handlers()
     try:

@@ -25,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import normalizer  # noqa: E402
+import webapp      # noqa: E402  (for the stdio-safety fix)
 
 FFMPEG = normalizer.resolve_ffmpeg()
 FFPROBE = str(Path(FFMPEG).parent / 'ffprobe') if Path(FFMPEG).is_absolute() else 'ffprobe'
@@ -227,6 +228,51 @@ def test_rate_policy(workdir: Path, outdir: Path):
     print()
 
 
+
+def test_awkward_filename(workdir: Path, outdir: Path):
+    """
+    A filename the console encoding cannot represent must not fail the track.
+
+    The engine prints progress lines containing the filename. On Windows those
+    go to a cp1252 stream, and real DJ libraries are full of characters cp1252
+    has never heard of — accents, CJK, and the private-use codepoints macOS
+    substitutes for '/'. One of those raised UnicodeEncodeError mid-encode and
+    reported a perfectly good file as failed:
+
+        'charmap' codec can't encode character '\\uf022' ... maps to <undefined>
+
+    Reproduced here by pointing stdout at a strict cp1252 stream, which is what
+    the packaged Windows app had.
+    """
+    import io
+    print("[awkward filenames]")
+    names = [
+        "track \uf022 slash.flac",       # macOS private-use '/'
+        "Bj\u00f6rk \u2014 caf\u00e9.flac",     # accents + em dash
+        "\u30c6\u30b9\u30c8 track.flac",           # CJK
+    ]
+    for name in names:
+        src = workdir / name
+        r = run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y",
+                 "-f", "lavfi", "-i", "anoisesrc=d=1:c=pink:r=44100:a=0.4",
+                 "-ac", "2", "-c:a", "flac", str(src)])
+        if r.returncode != 0:
+            check(f"could create {name!r}", False, r.stderr)
+            continue
+        out = normalizer.get_output_filename(str(src), str(outdir), "aiff")
+        real = sys.stdout
+        sys.stdout = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+        webapp._make_stdio_safe()   # what the app does at startup
+        try:
+            ok, msg = normalizer.normalize_audio(str(src), out, output_format="aiff")
+        except UnicodeEncodeError as e:
+            ok, msg = False, f"UnicodeEncodeError: {e}"
+        finally:
+            sys.stdout = real
+        check(f"survives cp1252 stdout: {name!r}", ok, msg)
+    print()
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="annorm_test_") as tmp:
         workdir = Path(tmp)
@@ -244,6 +290,7 @@ def main():
                 test_format(src, outdir, fmt, normalizer.DEFAULT_BITRATE)
 
         test_rate_policy(workdir, outdir)
+        test_awkward_filename(workdir, outdir)
 
         # Guard rails
         print("[guards]")
