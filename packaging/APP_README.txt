@@ -153,10 +153,6 @@ WHY 16-BIT WAV?
   Note that WAV cannot carry embedded cover art — use AIFF or FLAC to
   keep artwork.
 
-  On a Mac, Finder and Quick Look never show embedded FLAC artwork —
-  that's an Apple limitation. The art IS in the file, and rekordbox,
-  CDJs and VLC all display it.
-
 
 --------------------------------------------------------------------
 

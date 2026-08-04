@@ -1,6 +1,6 @@
 # Very Thoughtful Normalisation (but in a good way) - by Picnic Labs
 
-Professional audio normalization system for performers, DJ's and sound designers. Normalises audio files to a consistent -12 LUFS loudness for punchy playback on high-quality sound systems with good heaadroom for effects and layers. Never fiddle with trim again...
+Professional audio normalization system for performers, DJ's and sound designers. Normalises audio files to a consistent -12 LUFS loudness for punchy playback on high-quality sound systems with good headroom for effects and layers. Never fiddle with trim again...
 
 ## Features
 
@@ -11,8 +11,8 @@ Professional audio normalization system for performers, DJ's and sound designers
 - **Lossless stays lossless:** A lossless source keeps its own sample rate and
   full 24-bit depth — nothing is re-compressed and nothing is resampled unless
   the source is above 48 kHz (see [Sample rate](#sample-rate))
-- **Zero Quality Loss** No compression on lossless files, just loudness normalization
-- **Club Freindly** Know exactly what Pioneer/AlphaTheta gear your files will work on
+- **Zero Quality Loss:** No compression on lossless files, just loudness normalization
+- **Club Friendly:** Know exactly what Pioneer/AlphaTheta gear your files will work on
 - **Format Support:** M4A, WAV, FLAC, MP3, AIFF, OGG
 
 ## Download the app (nothing else to install)
@@ -23,7 +23,7 @@ Python and ffmpeg are bundled inside.
 
 **macOS** (`VTNormal-macos.zip`)
 
-One download, runs natively on both Apple Silicon and Intel.**
+One download, runs natively on both Apple Silicon and Intel.
 
 1. Unzip and drag **VTNormal.app** to your Applications
    folder.
@@ -231,7 +231,7 @@ capping at 48 kHz means every file this tool writes plays on all of them.
 | Format | Type | Bitrate | Pioneer support |
 |--------|------|---------|-----------------|
 | **AIFF** (default) | Lossless, uncompressed 24-bit | — | **ALL** CDJ/XDJ gear |
-| **WAV** | Lossless, uncompressed 16-bit 48kHz | — | **ALL** CDJ/XDJ gear |
+| **WAV** | Lossless, uncompressed 16-bit | — | **ALL** CDJ/XDJ gear |
 | **FLAC** | Lossless, compressed 24-bit (much smaller) | — | **Newer gear only**|
 | **MP3** | Lossy (libmp3lame, ID3v2.3) | 320/256/192 kbps | **ALL** CDJ/XDJ gear |
 | **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | Most **modern** gear|
