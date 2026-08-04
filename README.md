@@ -21,8 +21,9 @@ Grab the GUI app for your platform from the
 [releases page](https://github.com/Psi-am-i/audio-normalisation/releases/latest).
 Python and ffmpeg are bundled inside.
 
-**macOS** (`VTNormal-macos.zip`) — **one download, runs natively on both
-Apple Silicon and Intel.**
+**macOS** (`VTNormal-macos.zip`)
+
+One download, runs natively on both Apple Silicon and Intel.**
 
 1. Unzip and drag **VTNormal.app** to your Applications
    folder.
@@ -34,6 +35,7 @@ Apple Silicon and Intel.**
 3. Open App by double-clicking, now and forever after.
 
 **Order matters.**
+
 If you open it first and get blocked, running the command afterwards does 
 **not** clear the Mac's annoying Nanny nonsense. If that happens, go to 
 **System Settings → Privacy & Security**, scroll down, and choose **Open Anyway**,
@@ -41,6 +43,7 @@ then **Open Anyway** again in the pop-up. If you run the Terminal line first, yo
 all this.
 
 **Why the Terminal step?** 
+
 Removing that warning permanently means paying Apple $99/year for a Developer ID. 
 This app is free, so it borrows the same approach Radarr, Sonarr and friends use: 
 you sign it yourself, locally and in one command it re-signs the app with your own machine's
@@ -234,28 +237,34 @@ capping at 48 kHz means every file this tool writes plays on all of them.
 | **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | Most **modern** gear|
 
 **AIFF & WAV - Universal & Top Quality**
+
 Lossless and universally supported on all Pioneer/Alpha-Theta and most good brands gear (Denon etc) 
 AIFF supports 24 bit and album art. Large files.
 WAV supports 16 bit and does not support album art. Slightly smaller files.
 
 **FLAC — Supported on Newer Gear** 
+
 Lossless, supports album art and smaller than AIFF & WAV. 
 CDJ-3000, CDJ-2000NXS2, CDJ-TOUR1, XDJ-1000MK2, XDJ-RX2,
 XDJ-RX3, XDJ-XZ, XDJ-AZ, Opus Quad, Omnis Duo (and newer).
 
 **FLAC — NOT supported:** 
+
 CDJ-2000NXS and older, CDJ-900/900NXS, CDJ-850,
 CDJ-350, XDJ-700, XDJ-1000 (mk1), XDJ-RX (mk1), XDJ-RR.
 
 **AAC — Better Lossy codec. Supported on Post-CD, USB capable Gear** 
+
 Lossy but better than MP3 at the same bitrates.
 All modern players (CDJ-350/850/900/2000 onward and every
 XDJ). Only ancient CD-only decks (CDJ-800/1000 etc.) can't read it.
 
 **MP3 - Universal & Lossy**
+
 The Universal lossy format. Good at high bitrates, supports album art. Plays everywhere. 
 
 **Why 16-bit WAV?** 
+
 ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE` header (`wFormatTag` `0xFFFE`) 
 that some CDJ firmware rejects, and offers no way to suppress it. 16-bit WAV plays 
 everywhere; if you want 24-bit lossless, use AIFF (that's why it's the default). 
@@ -265,8 +274,10 @@ WAV is therefore the **one** output format that cannot fully preserve a very hig
 lossless source: the sample rate is kept, but bit depth drops to 16. AIFF and FLAC both
 keep the full 24 bits.
 
-**AAC encoder note:** on macOS the bundled/detected ffmpeg uses Apple's AudioToolbox encoder
-(`aac_at`), which genuinely hits 320 kbps. ffmpeg's built-in `aac` encoder (used on Windows/Linux)
+**AAC encoder note:** 
+
+On macOS the bundled/detected ffmpeg uses Apple's AudioToolbox encoder (`aac_at`), 
+which genuinely hits 320 kbps. ffmpeg's built-in `aac` encoder (used on Windows/Linux)
 caps out around ~224 kbps for 44.1 kHz stereo even when 320 is requested.
 
 ## File Structure
