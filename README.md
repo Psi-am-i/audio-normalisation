@@ -26,23 +26,28 @@ Apple Silicon and Intel.** No need to work out which Mac you have.
 
 1. Unzip and drag **Very Thoughtful Normalisation.app** to your Applications
    folder.
-2. The app isn't signed with a paid Apple certificate, so macOS blocks it.
-   Self-sign it once — open Terminal, paste this whole line, press Return:
+2. **Do this BEFORE opening it for the first time.** Open Terminal, paste this
+   whole line, press Return:
    ```bash
    codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
    ```
-3. That's it — open it by double-clicking, now and forever after.
+3. Open it by double-clicking, now and forever after.
 
+> **Order matters.** If you open it first and get blocked, running the command
+> afterwards does **not** clear it — macOS has already recorded its refusal. You
+> then have to go to **System Settings → Privacy & Security**, scroll down, and
+> choose **Open Anyway**, then **Open Anyway** again in the pop-up. Doing the
+> Terminal line first skips all of that.
+>
 > **Why the Terminal step?** Removing that warning permanently means paying
 > Apple $99/year for a Developer ID. This app is free, so it borrows the same
 > approach Radarr, Sonarr and friends use: you sign it yourself, locally, in one
-> command. The command re-signs the app with your own machine's ad-hoc signature
-> and clears the "downloaded from the internet" quarantine flag. Nothing is sent
+> command. It re-signs the app with your own machine's ad-hoc signature and
+> clears the "downloaded from the internet" quarantine flag. Nothing is sent
 > anywhere.
 >
 > Don't bother with right-click → Open — **macOS 15 (Sequoia) removed that
-> shortcut.** Since then it's a trip through System Settings → Privacy &
-> Security and an admin password, every bit of which the one-liner above skips.
+> shortcut.**
 
 **Windows** (`VTNormalisation-windows.zip`):
 

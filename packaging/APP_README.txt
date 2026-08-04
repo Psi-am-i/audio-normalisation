@@ -1,132 +1,167 @@
-# Very Thoughtful Normalisation (but in a good way) - by Picnic Labs
+====================================================================
+  VERY THOUGHTFUL NORMALISATION (but in a good way)
+  by Picnic Labs
+====================================================================
 
-Professional audio normalization system for DJing. Normalizes music files to
-consistent -12 LUFS loudness for club playback on high-quality sound systems.
-Never fiddle with trim again...
+Professional audio normalization for performance. Normalizes music
+files to a consistent -12 LUFS for playback on high-quality club
+sound systems. Never fiddle with trim again...
 
-## Features
 
-- **Consistent Loudness:** Normalizes all tracks to -12 LUFS using EBU R128 standard
-- **Five Output Formats:** Lossless AIFF (default), FLAC, WAV — or lossy MP3/AAC at 320/256/192 kbps
-- **Two Modes:** Manual batch processing or automatic folder watching
-- **Preserves Originals:** Never modifies source files
-- **Club-Optimized:** No compression on lossless files, just loudness normalization
-- Know exactly what Pioneer/AlphaTheta gear your files will work on
-- **Format Support:** M4A, WAV, FLAC, MP3, AIFF, OGG
+--------------------------------------------------------------------
+  FEATURES
+--------------------------------------------------------------------
 
-** INSTALLATION **
+  * Consistent loudness — every track to -12 LUFS (EBU R128)
+  * Five output formats — lossless AIFF (default), FLAC, WAV, or
+    lossy MP3/AAC at 320/256/192 kbps
+  * Two modes — manual batch processing or automatic folder watching
+  * Preserves originals — never modifies your source files
+  * Club-optimized — no compression on lossless files, just loudness
+  * Know exactly what Pioneer/AlphaTheta gear your files work on
+  * Reads M4A, WAV, FLAC, MP3, AIFF, OGG
 
-**macOS** (`VTNormalisation-macos.zip`)
 
-ONE download — it runs natively on both Apple Silicon and Intel Macs, so there
-is nothing to choose between.
+--------------------------------------------------------------------
+  MAC INSTALLATION  (VTNormalisation-macos.zip)
+--------------------------------------------------------------------
 
-1. Unzip and drag "Very Thoughtful Normalisation.app" into your Applications
-   folder.
+One download — runs natively on both Apple Silicon and Intel Macs.
 
-2. The app isn't signed with a paid Apple certificate, so macOS will block it.
-   Self-sign it once: open Terminal, paste this WHOLE line, press Return.
+  1. Unzip.
 
-   codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
+  2. Move "Very Thoughtful Normalisation.app" to Applications.
 
-3. Done — double-click to open it, now and every time after.
+  3. IMPORTANT — do this BEFORE you open it the first time.
+     Open Terminal, paste this ONE line, press Enter:
 
-Why the Terminal step? Removing that warning permanently costs $99/year for an
-Apple Developer ID. This app is free, so it uses the same approach Radarr and
-Sonarr do: you sign it yourself, on your own machine, in one command. It
-re-signs the app with a local ad-hoc signature and clears the "downloaded from
-the internet" flag. Nothing is sent anywhere.
+codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
 
-Don't bother with right-click then Open — macOS 15 (Sequoia) removed that
-shortcut. Since then it means a trip through System Settings > Privacy &
-Security plus an admin password. The one-liner above skips all of it.
+  4. Launch the app. It will open normally from now on.
 
-**Windows** (`VTNormalisation-windows.zip`):
+Why this step? The app isn't signed with a paid Apple certificate,
+so macOS blocks it. Removing that warning permanently costs $99/year
+for an Apple Developer ID. This app is free, so it uses the same
+approach Radarr and Sonarr do: you sign it yourself, on your own
+machine, in one command. It clears the "downloaded from the
+internet" flag. Nothing is sent anywhere.
 
-1. Unzip the whole folder somewhere (keep the files together).
-2. Double-click `VTNormalisation.exe`. If SmartScreen objects, click
-   **More info → Run anyway** (needed once only).
+ALREADY TRIED TO OPEN IT AND GOT BLOCKED?
+Running the command afterwards does NOT clear it — macOS has already
+recorded its refusal. You have to go to:
 
-## In the window
+    System Settings > Privacy & Security
 
-- FROM      pick the folder with your tracks
-- TO        pick where the normalized files go
-- FORMAT    AIFF / FLAC / WAV / MP3 / AAC (bitrate appears for MP3/AAC)
-- ABOUT     the full gear-compatibility rundown
+scroll down, and choose "Open Anyway". A pop-up appears; choose
+"Open Anyway" again. Doing the Terminal line FIRST skips all of this.
 
-Under the format row is a line telling you exactly what will happen to your
-audio — e.g. "41 of 128 tracks are lossless — they stay lossless" — counted
-from your own files, and it turns into a warning if you pick a lossy format.
 
-While it runs you get a live list: what is queued, what is processing now, and
-what is done. Stop is graceful — it finishes the track it is on, so nothing is
-left half-written.
+--------------------------------------------------------------------
+  WINDOWS INSTALLATION  (VTNormalisation-windows.zip)
+--------------------------------------------------------------------
 
-## How It Works
+  1. Unzip the whole folder somewhere. Keep the files together.
 
-### Two-Pass Normalization
+  2. Double-click VTNormalisation.exe.
 
-The tool uses ffmpeg's `loudnorm` filter with a two-pass process for accurate
-loudness normalization:
+If SmartScreen objects, click "More info" then "Run anyway" —
+needed once only.
 
-1. **Pass 1 (Analysis):** Measures current loudness levels
-   - Integrated loudness (LUFS)
-   - Loudness range (LRA)
-   - True peak (TP)
 
-2. **Pass 2 (Normalization):** Applies precise gain adjustment
-   - Uses measurements from pass 1
-   - Normalizes to -12 LUFS target
-   - Prevents clipping with -1.5 dB true peak limit
-   - Outputs lossless AIFF (default) or FLAC with maximum compression
+--------------------------------------------------------------------
+  THE APP WINDOW
+--------------------------------------------------------------------
 
-### Why -12 LUFS?
+  FROM      Pick the folder with your tracks
+  TO        Pick where the normalized files go
+  FORMAT    AIFF / FLAC / WAV / MP3 / AAC
+            (a bitrate choice appears for MP3 and AAC)
+  ABOUT     The full gear-compatibility rundown
 
-- Matches modern commercial dance music masters
-- Hot enough for club systems without distortion
-- Provides good headroom for system dynamics
-- Consistent with streaming platform standards
+Under the format row it tells you exactly what will happen to your
+audio — e.g. "41 of 128 tracks are lossless — they stay lossless" —
+counted from your own files. It turns into a warning if you pick a
+lossy format.
 
-### Output Formats & Pioneer Gear Compatibility
+While it runs you get a live list: what is queued, what is
+processing, and what is done. Stop is graceful — it finishes the
+track it is on, so nothing is left half-written.
 
-Five output formats are available in every mode (CLI menu, GUI FORMAT/BITRATE
-buttons, `output_format` + `bitrate` in `config.json`).
 
-Lossless stays lossless: output keeps the source's OWN sample rate, up to
-48 kHz. A 44.1 kHz track stays 44.1 kHz, a 48 kHz master stays 48 kHz. Only
-sources above 48 kHz (88.2/96 kHz) are resampled, and then to 48 kHz — the
-highest rate every Pioneer/AlphaTheta player accepts, so everything this app
-writes plays on all of them.
+--------------------------------------------------------------------
+  HOW IT WORKS
+--------------------------------------------------------------------
 
-| Format | Type | Bitrate | Pioneer support |
-|--------|------|---------|-----------------|
-| **AIFF** (default) | Lossless, uncompressed 24-bit | — | **ALL** CDJ/XDJ gear |
-| **WAV** | Lossless, uncompressed 16-bit | — | **ALL** CDJ/XDJ gear |
-| **FLAC** | Lossless, compressed 24-bit (much smaller) | — | **Newer gear only** — see below |
-| **MP3** | Lossy (libmp3lame, ID3v2.3) | 320/256/192 kbps | **ALL** CDJ/XDJ gear |
-| **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | All **modern** gear — see below |
+Two-pass normalization using ffmpeg's loudnorm filter:
 
-**FLAC — supported:** CDJ-3000, CDJ-2000NXS2, CDJ-TOUR1, XDJ-1000MK2, XDJ-RX2,
-XDJ-RX3, XDJ-XZ, XDJ-AZ, Opus Quad, Omnis Duo (and newer).
-**FLAC — NOT supported:** CDJ-2000NXS and older, CDJ-900/900NXS, CDJ-850,
-CDJ-350, XDJ-700, XDJ-1000 (mk1), XDJ-RX (mk1), XDJ-RR.
+  Pass 1 (Analysis) — measures current loudness
+      * Integrated loudness (LUFS)
+      * Loudness range (LRA)
+      * True peak (TP)
 
-**AAC — supported** on all modern players (CDJ-350/850/900/2000 onward and every
-XDJ). Only ancient CD-only decks (CDJ-800/1000 etc.) can't read it.
+  Pass 2 (Normalization) — applies precise gain adjustment
+      * Uses the measurements from pass 1
+      * Normalizes to the -12 LUFS target
+      * Prevents clipping with a -1.5 dB true peak limit
 
-**FLAC cover art on macOS:** Finder and Quick Look never display embedded FLAC
-artwork — an Apple limitation (they read FLAC's tags but ignore its PICTURE
-block, so you get the generic music-note icon). The art **is** embedded in the
-file, typed "Cover (front)", and rekordbox, CDJs, VLC etc. display it normally.
+ADVANTAGES
+  * Outputs lossless AIFF or FLAC, or lossy MP3 or AAC
+  * Matches modern dance music masters
+  * Hot enough for club systems without distortion
+  * Good headroom for system dynamics and effects
+  * Consistent with club mastering standards
 
-**Why 16-bit WAV?** ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE`
-header that some CDJ firmware rejects. 16-bit WAV plays everywhere; if you want
-24-bit lossless, use AIFF (that's why it's the default). Note WAV also cannot
-carry embedded cover art — use AIFF/FLAC to keep artwork.
 
----
+--------------------------------------------------------------------
+  OUTPUT FORMATS & PIONEER GEAR COMPATIBILITY
+--------------------------------------------------------------------
 
-Your originals are never changed. Everything is levelled to -12 LUFS.
-Enjoy the terrible joke.
+LOSSLESS STAYS LOSSLESS
+Output keeps the source's OWN sample rate, up to 48 kHz. A 44.1 kHz
+track stays 44.1 kHz; a 48 kHz master stays 48 kHz. Only sources
+above 48 kHz (88.2 / 96 kHz) are resampled, and then to 48 kHz — the
+highest rate every Pioneer/AlphaTheta player accepts, so everything
+this app writes will play.
+
+  FORMAT  TYPE                             BITRATE           GEAR
+  ------  -------------------------------  ---------------  ----------------
+  AIFF    Lossless, uncompressed 24-bit    —                ALL CDJ/XDJ
+  WAV     Lossless, uncompressed 16-bit    —                ALL CDJ/XDJ
+  FLAC    Lossless, compressed 24-bit      —                Newer gear only
+  MP3     Lossy (libmp3lame, ID3v2.3)      320/256/192 kbps ALL CDJ/XDJ
+  AAC     Lossy (beats MP3 at same rate)   320/256/192 kbps All modern gear
+
+FLAC — SUPPORTED
+  CDJ-3000, CDJ-2000NXS2, CDJ-TOUR1, XDJ-1000MK2, XDJ-RX2, XDJ-RX3,
+  XDJ-XZ, XDJ-AZ, Opus Quad, Omnis Duo (and newer).
+
+FLAC — NOT SUPPORTED
+  CDJ-2000NXS and older, CDJ-900/900NXS, CDJ-850, CDJ-350, XDJ-700,
+  XDJ-1000 (mk1), XDJ-RX (mk1), XDJ-RR.
+
+AAC — SUPPORTED
+  All modern players (CDJ-350/850/900/2000 onward and every XDJ).
+  Only ancient CD-only decks (CDJ-800/1000 etc.) can't read it.
+
+WHY 16-BIT WAV?
+  24-bit WAV is written with a WAVE_FORMAT_EXTENSIBLE header that
+  some CDJ firmware rejects. 16-bit WAV plays everywhere. If you want
+  24-bit lossless use AIFF for the highest quality and maximum
+  compatibility (that's why it's the default), or FLAC to save space
+  and still be lossless.
+
+  Note that WAV cannot carry embedded cover art — use AIFF or FLAC to
+  keep artwork.
+
+  On a Mac, Finder and Quick Look never show embedded FLAC artwork —
+  that's an Apple limitation. The art IS in the file, and rekordbox,
+  CDJs and VLC all display it.
+
+
+--------------------------------------------------------------------
+
+Your originals are never changed.
+Enjoy the terrible jokes.
 
 This app bundles FFmpeg (GPLv3) — see the "licenses" folder.
+Source: ffmpeg.org
