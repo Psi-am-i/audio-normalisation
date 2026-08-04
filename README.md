@@ -1,6 +1,6 @@
 # Very Thoughtful Normalisation (but in a good way) - by Picnic Labs
 
-Professional audio normalization system for DJing. Normalizes music files to consistent -12 LUFS loudness for club playback on high-quality sound systems. Never fiddle with trim again...
+Professional audio normalization system for performers, DJ's and sound designers. Normalises audio files to a consistent -12 LUFS loudness for punchy playback on high-quality sound systems with good heaadroom for effects and layers. Never fiddle with trim again...
 
 ## Features
 
@@ -11,18 +11,18 @@ Professional audio normalization system for DJing. Normalizes music files to con
 - **Lossless stays lossless:** A lossless source keeps its own sample rate and
   full 24-bit depth — nothing is re-compressed and nothing is resampled unless
   the source is above 48 kHz (see [Sample rate](#sample-rate))
-- **Club-Optimized:** No compression on lossless files, just loudness normalization
-- Know exactly what Pioneer/AlphaTheta gear your files will work on
+- **Zero Quality Loss** No compression on lossless files, just loudness normalization
+- **Club Freindly** Know exactly what Pioneer/AlphaTheta gear your files will work on
 - **Format Support:** M4A, WAV, FLAC, MP3, AIFF, OGG
 
-## Download the app (easiest — nothing to install)
+## Download the app (nothing else to install)
 
 Grab the GUI app for your platform from the
 [releases page](https://github.com/Psi-am-i/audio-normalisation/releases/latest).
 Python and ffmpeg are bundled inside.
 
 **macOS** (`VTNormal-macos.zip`) — **one download, runs natively on both
-Apple Silicon and Intel.** No need to work out which Mac you have.
+Apple Silicon and Intel.**
 
 1. Unzip and drag **VTNormal.app** to your Applications
    folder.
@@ -31,23 +31,23 @@ Apple Silicon and Intel.** No need to work out which Mac you have.
    ```bash
    codesign --force --deep -s - /Applications/VTNormal.app && xattr -rd com.apple.quarantine /Applications/VTNormal.app
    ```
-3. Open it by double-clicking, now and forever after.
+3. Open App by double-clicking, now and forever after.
 
-> **Order matters.** If you open it first and get blocked, running the command
-> afterwards does **not** clear it — macOS has already recorded its refusal. You
-> then have to go to **System Settings → Privacy & Security**, scroll down, and
-> choose **Open Anyway**, then **Open Anyway** again in the pop-up. Doing the
-> Terminal line first skips all of that.
->
-> **Why the Terminal step?** Removing that warning permanently means paying
-> Apple $99/year for a Developer ID. This app is free, so it borrows the same
-> approach Radarr, Sonarr and friends use: you sign it yourself, locally, in one
-> command. It re-signs the app with your own machine's ad-hoc signature and
-> clears the "downloaded from the internet" quarantine flag. Nothing is sent
-> anywhere.
->
-> Don't bother with right-click → Open — **macOS 15 (Sequoia) removed that
-> shortcut.**
+**Order matters.**
+If you open it first and get blocked, running the command afterwards does 
+**not** clear the Mac's annoying Nanny nonsense. If that happens, go to 
+**System Settings → Privacy & Security**, scroll down, and choose **Open Anyway**,
+then **Open Anyway** again in the pop-up. If you run the Terminal line first, you skip 
+all this.
+
+**Why the Terminal step?** 
+Removing that warning permanently means paying Apple $99/year for a Developer ID. 
+This app is free, so it borrows the same approach Radarr, Sonarr and friends use: 
+you sign it yourself, locally and in one command it re-signs the app with your own machine's
+ad-hoc signature and clears the "scary file downloaded from the internet" quarantine flag. 
+Nothing is sent anywhere and the app source code can be dumped into any LLM to check for 
+hidden threats.
+ 
 
 **Windows** (`VTNormal-windows.zip`):
 
@@ -55,9 +55,8 @@ Apple Silicon and Intel.** No need to work out which Mac you have.
 2. Double-click `VTNormal.exe`. If SmartScreen objects, click
    **More info → Run anyway** (needed once only).
 
-Everything below is for running from source (CLI + auto-watch daemon).
 
-## Requirements (running from source)
+## Building from Source and using CLI
 
 - Python 3.7+
 - ffmpeg (for audio processing)
@@ -85,7 +84,7 @@ cd audio-normalisation
 pip3 install -r requirements.txt
 ```
 
-## Usage
+## CLI Usage
 
 ### Manual Mode
 
@@ -226,44 +225,49 @@ CDJ-2000, CDJ-2000NXS, XDJ-700, XDJ-1000/MK2 and XDJ-XZ all top out at 48 kHz
 for WAV/AIFF. Only CDJ-3000, CDJ-2000NXS2 and Opus Quad read 88.2/96 kHz — so
 capping at 48 kHz means every file this tool writes plays on all of them.
 
-> Earlier versions pinned **all** output to 44.1 kHz, which silently
-> downsampled every 48 kHz master for no compatibility benefit.
-
 | Format | Type | Bitrate | Pioneer support |
 |--------|------|---------|-----------------|
 | **AIFF** (default) | Lossless, uncompressed 24-bit | — | **ALL** CDJ/XDJ gear |
-| **WAV** | Lossless, uncompressed 16-bit | — | **ALL** CDJ/XDJ gear |
-| **FLAC** | Lossless, compressed 24-bit (much smaller) | — | **Newer gear only** — see below |
+| **WAV** | Lossless, uncompressed 16-bit 48kHz | — | **ALL** CDJ/XDJ gear |
+| **FLAC** | Lossless, compressed 24-bit (much smaller) | — | **Newer gear only**|
 | **MP3** | Lossy (libmp3lame, ID3v2.3) | 320/256/192 kbps | **ALL** CDJ/XDJ gear |
-| **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | All **modern** gear — see below |
+| **AAC** (.m4a) | Lossy (better than MP3 at same bitrate) | 320/256/192 kbps | Most **modern** gear|
 
-**FLAC — supported:** CDJ-3000, CDJ-2000NXS2, CDJ-TOUR1, XDJ-1000MK2, XDJ-RX2,
+**AIFF & WAV - Universal & Top Quality**
+Lossless and universally supported on all Pioneer/Alpha-Theta and most good brands gear (Denon etc) 
+AIFF supports 24 bit and album art. Large files.
+WAV supports 16 bit and does not support album art. Slightly smaller files.
+
+**FLAC — Supported on Newer Gear** 
+Lossless, supports album art and smaller than AIFF & WAV. 
+CDJ-3000, CDJ-2000NXS2, CDJ-TOUR1, XDJ-1000MK2, XDJ-RX2,
 XDJ-RX3, XDJ-XZ, XDJ-AZ, Opus Quad, Omnis Duo (and newer).
-**FLAC — NOT supported:** CDJ-2000NXS and older, CDJ-900/900NXS, CDJ-850,
+
+**FLAC — NOT supported:** 
+CDJ-2000NXS and older, CDJ-900/900NXS, CDJ-850,
 CDJ-350, XDJ-700, XDJ-1000 (mk1), XDJ-RX (mk1), XDJ-RR.
 
-**AAC — supported** on all modern players (CDJ-350/850/900/2000 onward and every
+**AAC — Better Lossy codec. Supported on Post-CD, USB capable Gear** 
+Lossy but better than MP3 at the same bitrates.
+All modern players (CDJ-350/850/900/2000 onward and every
 XDJ). Only ancient CD-only decks (CDJ-800/1000 etc.) can't read it.
 
-**FLAC cover art on macOS:** Finder and Quick Look never display embedded FLAC
-artwork — an Apple limitation (they read FLAC's tags but ignore its PICTURE
-block, so you get the generic music-note icon). The art **is** embedded in the
-file, typed "Cover (front)", and rekordbox, CDJs, VLC etc. display it normally.
+**MP3 - Universal & Lossy**
+The Universal lossy format. Good at high bitrates, supports album art. Plays everywhere. 
 
-**Why 16-bit WAV?** ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE`
-header (`wFormatTag` `0xFFFE`) that some CDJ firmware rejects, and offers no way
-to suppress it. 16-bit WAV plays everywhere; if you want 24-bit lossless, use
-AIFF (that's why it's the default). Note WAV also cannot carry embedded cover
-art — use AIFF/FLAC to keep artwork.
+**Why 16-bit WAV?** 
+ffmpeg writes 24-bit WAV with a `WAVE_FORMAT_EXTENSIBLE` header (`wFormatTag` `0xFFFE`) 
+that some CDJ firmware rejects, and offers no way to suppress it. 16-bit WAV plays 
+everywhere; if you want 24-bit lossless, use AIFF (that's why it's the default). 
+Note WAV also cannot carry embedded cover art — use AIFF/FLAC to keep artwork.
 
-WAV is therefore the **one** output format that cannot fully preserve a lossless
-source: the sample rate is kept, but bit depth drops to 16. AIFF and FLAC both
+WAV is therefore the **one** output format that cannot fully preserve a very high quality 
+lossless source: the sample rate is kept, but bit depth drops to 16. AIFF and FLAC both
 keep the full 24 bits.
 
-**AAC encoder note:** on macOS the bundled/detected ffmpeg uses Apple's
-AudioToolbox encoder (`aac_at`), which genuinely hits 320 kbps. ffmpeg's
-built-in `aac` encoder (used on Windows/Linux) caps out around ~224 kbps for
-44.1 kHz stereo even when 320 is requested.
+**AAC encoder note:** on macOS the bundled/detected ffmpeg uses Apple's AudioToolbox encoder
+(`aac_at`), which genuinely hits 320 kbps. ffmpeg's built-in `aac` encoder (used on Windows/Linux)
+caps out around ~224 kbps for 44.1 kHz stereo even when 320 is requested.
 
 ## File Structure
 
@@ -292,7 +296,7 @@ audio-normalisation/
 
 **Output formats** (CLI menu / GUI buttons / `output_format` in `config.json`):
 - AIFF (lossless, uncompressed 24-bit — default)
-- FLAC (lossless, compressed)
+- FLAC (lossless, compressed 24 bit)
 - WAV (lossless, uncompressed 16-bit)
 - MP3 (lossy, 320/256/192 kbps)
 - AAC/.m4a (lossy, 320/256/192 kbps)
@@ -392,8 +396,8 @@ For issues or questions, check the logs first:
 
 ## Contributing
 
-Issues and pull requests are welcome! This tool was created for the DJ community.
+Issues and pull requests are welcome! This tool was created for professional party people. If you are in Johannesburg, look us up, come dance maybe even play. whysoserious.org
 
 ---
 
-**Happy DJing! 🎧🔊**
+**Cheers! 🎧🔊**
