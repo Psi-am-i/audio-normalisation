@@ -2,7 +2,7 @@
 #
 # Build the self-contained GUI app "Very Thoughtful Normalisation (but in a good way)".
 #
-# Output: packaging/dist-gui/VTNormalisation.zip  (send this)
+# Output: packaging/dist-gui/VTNormal.zip  (send this)
 #
 # A proper windowed macOS .app — double-click opens the interface (pywebview /
 # WKWebView) with native folder pickers. Python, pywebview, the interface HTML,
@@ -22,8 +22,8 @@ source "$PKG_DIR/lib_licenses.sh"
 BUILD_DIR="$PKG_DIR/build-gui"
 DIST_DIR="$PKG_DIR/dist-gui"
 VENV_DIR="$BUILD_DIR/venv"
-APP_NAME="VTNormalisation"
-APP_DIR="$DIST_DIR/Very Thoughtful Normalisation.app"
+APP_NAME="VTNormal"
+APP_DIR="$DIST_DIR/VTNormal.app"
 
 echo "==> Cleaning previous build"
 rm -rf "$BUILD_DIR" "$DIST_DIR"

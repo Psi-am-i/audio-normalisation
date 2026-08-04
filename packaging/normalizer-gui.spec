@@ -83,7 +83,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='VTNormalisation',
+    name='VTNormal',
     debug=False,
     strip=False,
     upx=False,
@@ -98,16 +98,16 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name='VTNormalisation',
+    name='VTNormal',
 )
 
 app = BUNDLE(
     coll,
-    name='Very Thoughtful Normalisation.app',
+    name='VTNormal.app',
     icon=os.path.join(repo_root, 'packaging', 'app_icon.icns'),
     bundle_identifier='com.picniclabs.vtnormalisation',
     info_plist={
-        'CFBundleName': 'VTNormalisation',
+        'CFBundleName': 'VTNormal',
         'CFBundleDisplayName': 'Very Thoughtful Normalisation (but in a good way)',
         'CFBundleShortVersionString': '2.0',
         'NSHighResolutionCapable': True,

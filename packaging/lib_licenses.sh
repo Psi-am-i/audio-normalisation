@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared helper: write FFmpeg license + attribution into a distributable.
-# Sourced by build_app.sh and build_gui_app.sh.
+# Sourced by build_gui_app.sh.
 
 # write_ffmpeg_licenses <dest_dir> <ffmpeg_version_line>
 write_ffmpeg_licenses() {

@@ -21,15 +21,15 @@ Grab the GUI app for your platform from the
 [releases page](https://github.com/Psi-am-i/audio-normalisation/releases/latest).
 Python and ffmpeg are bundled inside.
 
-**macOS** (`VTNormalisation-macos.zip`) — **one download, runs natively on both
+**macOS** (`VTNormal-macos.zip`) — **one download, runs natively on both
 Apple Silicon and Intel.** No need to work out which Mac you have.
 
-1. Unzip and drag **Very Thoughtful Normalisation.app** to your Applications
+1. Unzip and drag **VTNormal.app** to your Applications
    folder.
 2. **Do this BEFORE opening it for the first time.** Open Terminal, paste this
    whole line, press Return:
    ```bash
-   codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
+   codesign --force --deep -s - /Applications/VTNormal.app && xattr -rd com.apple.quarantine /Applications/VTNormal.app
    ```
 3. Open it by double-clicking, now and forever after.
 
@@ -49,10 +49,10 @@ Apple Silicon and Intel.** No need to work out which Mac you have.
 > Don't bother with right-click → Open — **macOS 15 (Sequoia) removed that
 > shortcut.**
 
-**Windows** (`VTNormalisation-windows.zip`):
+**Windows** (`VTNormal-windows.zip`):
 
 1. Unzip the whole folder somewhere (keep the files together).
-2. Double-click `VTNormalisation.exe`. If SmartScreen objects, click
+2. Double-click `VTNormal.exe`. If SmartScreen objects, click
    **More info → Run anyway** (needed once only).
 
 Everything below is for running from source (CLI + auto-watch daemon).
@@ -184,25 +184,6 @@ cat ~/Library/Logs/audio-normalizer-error.log
 ```bash
 bash uninstall_daemon.sh
 ```
-
-## Shareable CLI App (for non-technical users)
-
-Besides the GUI app above, you can build a self-contained, double-clickable
-`Normalizer.app` that bundles Python and ffmpeg — recipients install nothing.
-Double-clicking opens Terminal with the manual flow (source → destination →
-format → bitrate, all five formats). The autowatch daemon is not included in
-the app.
-
-```bash
-packaging/build_app.sh
-```
-
-Send `packaging/dist/Normalizer.zip` (the final outputs live in
-`packaging/dist/`; anything under `packaging/build/` is an intermediate).
-The app is unsigned, so on first launch the recipient either right-clicks →
-**Open** → **Open**, or self-signs it once (see the Download section above,
-substituting `Normalizer.app`). See [packaging/BUILD.md](packaging/BUILD.md)
-for details and the architecture notes.
 
 ## How It Works
 

@@ -23,19 +23,19 @@ sound systems. Never fiddle with trim again...
 
 
 --------------------------------------------------------------------
-  MAC INSTALLATION  (VTNormalisation-macos.zip)
+  MAC INSTALLATION  (VTNormal-macos.zip)
 --------------------------------------------------------------------
 
 One download — runs natively on both Apple Silicon and Intel Macs.
 
   1. Unzip.
 
-  2. Move "Very Thoughtful Normalisation.app" to Applications.
+  2. Move VTNormal.app to Applications.
 
   3. IMPORTANT — do this BEFORE you open it the first time.
      Open Terminal, paste this ONE line, press Enter:
 
-codesign --force --deep -s - '/Applications/Very Thoughtful Normalisation.app' && xattr -rd com.apple.quarantine '/Applications/Very Thoughtful Normalisation.app'
+codesign --force --deep -s - /Applications/VTNormal.app && xattr -rd com.apple.quarantine /Applications/VTNormal.app
 
   4. Launch the app. It will open normally from now on.
 
@@ -57,12 +57,12 @@ scroll down, and choose "Open Anyway". A pop-up appears; choose
 
 
 --------------------------------------------------------------------
-  WINDOWS INSTALLATION  (VTNormalisation-windows.zip)
+  WINDOWS INSTALLATION  (VTNormal-windows.zip)
 --------------------------------------------------------------------
 
   1. Unzip the whole folder somewhere. Keep the files together.
 
-  2. Double-click VTNormalisation.exe.
+  2. Double-click VTNormal.exe.
 
 If SmartScreen objects, click "More info" then "Run anyway" —
 needed once only.

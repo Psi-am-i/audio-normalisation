@@ -93,7 +93,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='VTNormalisation',
+    name='VTNormal',
     debug=False,
     strip=False,
     upx=False,
@@ -108,5 +108,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name='VTNormalisation',
+    name='VTNormal',
 )

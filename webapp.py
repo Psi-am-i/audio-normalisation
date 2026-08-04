@@ -47,14 +47,14 @@ def _log_path() -> Path:
     if sys.platform == "darwin":
         d = Path.home() / "Library" / "Logs"
     elif os.name == "nt":
-        d = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "VTNormalisation"
+        d = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "VTNormal"
     else:
         d = Path.home() / ".local" / "state" / "vtnormalisation"
     try:
         d.mkdir(parents=True, exist_ok=True)
     except OSError:
         d = Path(tempfile.gettempdir())
-    return d / "VTNormalisation.log"
+    return d / "VTNormal.log"
 
 
 def _setup_logging() -> Path:

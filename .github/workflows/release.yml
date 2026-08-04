@@ -2,8 +2,8 @@ name: Release builds
 
 # Builds the distributable apps. PyInstaller cannot cross-compile, so each OS
 # bundle is produced on a runner of that OS:
-#   - windows-latest -> VTNormalisation-windows.zip (.exe onedir + ffmpeg.exe)
-#   - macos-latest   -> VTNormalisation-macos.zip   (.app, Apple Silicon)
+#   - windows-latest -> VTNormal-windows.zip (.exe onedir + ffmpeg.exe)
+#   - macos-latest   -> VTNormal-macos.zip   (.app, Apple Silicon)
 # On a v* tag the zips are attached to a GitHub release. Also runnable by hand
 # from the Actions tab (workflow_dispatch) to get artifacts without a release.
 
@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          root=dist-win/VTNormalisation
+          root=dist-win/VTNormal
           toc=$(find build-win -name 'Analysis-00.toc' | head -1)
           fail=0
 
@@ -128,14 +128,14 @@ jobs:
         run: |
           source packaging/lib_licenses.sh
           FFVER="$(./ffmpeg.exe -version | head -1)"
-          write_ffmpeg_licenses "dist-win/VTNormalisation/licenses" "$FFVER"
+          write_ffmpeg_licenses "dist-win/VTNormal/licenses" "$FFVER"
           # Canonical recipient README, shared with the macOS build
-          cp packaging/APP_README.txt dist-win/VTNormalisation/README.txt
-          cd dist-win && 7z a ../VTNormalisation-windows.zip VTNormalisation
+          cp packaging/APP_README.txt dist-win/VTNormal/README.txt
+          cd dist-win && 7z a ../VTNormal-windows.zip VTNormal
       - uses: actions/upload-artifact@v4
         with:
-          name: VTNormalisation-windows
-          path: VTNormalisation-windows.zip
+          name: VTNormal-windows
+          path: VTNormal-windows.zip
 
   macos:
     needs: test
@@ -161,11 +161,11 @@ jobs:
           PYTHON: python3
         run: packaging/build_gui_app.sh
       - name: Rename zip
-        run: mv packaging/dist-gui/VTNormalisation.zip VTNormalisation-macos.zip
+        run: mv packaging/dist-gui/VTNormal.zip VTNormal-macos.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: VTNormalisation-macos
-          path: VTNormalisation-macos.zip
+          name: VTNormal-macos
+          path: VTNormal-macos.zip
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -181,6 +181,6 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --generate-notes \
-            VTNormalisation-windows.zip VTNormalisation-macos.zip \
+            VTNormal-windows.zip VTNormal-macos.zip \
           || gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --clobber VTNormalisation-windows.zip VTNormalisation-macos.zip
+            --clobber VTNormal-windows.zip VTNormal-macos.zip
